@@ -1,16 +1,14 @@
 import { test, expect } from '@playwright/test';
 
 test('public landing page exposes Hello World and health status', async ({ page }) => {
-  await page.route('**/api/v1/health', async (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ status: 'ok' }),
-    }),
+  const healthResponsePromise = page.waitForResponse((response) =>
+    response.url().endsWith('/api/v1/health'),
   );
-
   await page.goto('/');
 
+  const healthResponse = await healthResponsePromise;
+  expect(healthResponse.status()).toBe(200);
+  await expect(healthResponse.json()).resolves.toEqual({ status: 'ok' });
   await expect(page.getByRole('heading', { name: 'Hello World' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Log in' })).toHaveAttribute(
     'href',
