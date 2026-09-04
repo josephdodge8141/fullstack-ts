@@ -12,4 +12,7 @@ Feature: Public starter application
     Given I am not signed in
     When I request the public health endpoint
     Then the response status is 200
-    And the response body is exactly a healthy status
+    And the response body is exactly:
+      """json
+      {"status":"ok"}
+      """
