@@ -1,0 +1,102 @@
+import assert from 'node:assert/strict';
+import { once } from 'node:events';
+import { spawn } from 'node:child_process';
+import { createServer } from 'node:net';
+import test from 'node:test';
+
+import { startServer } from './index.js';
+import { createConnections, type Connections } from './config/connections.js';
+
+const environment = (
+  port: number,
+  shutdownTimeoutMs = 100,
+): {
+  host: string;
+  port: number;
+  shutdownTimeoutMs: number;
+} => ({
+  host: '127.0.0.1',
+  port,
+  shutdownTimeoutMs,
+});
+
+const trackedConnections = (close: () => Promise<void>): Connections => ({
+  ...createConnections(),
+  close,
+});
+
+const freePort = async (): Promise<number> => {
+  const listener = createServer().listen(0, '127.0.0.1');
+  await once(listener, 'listening');
+  const address = listener.address();
+  assert.ok(address !== null && typeof address === 'object');
+  const port = address.port;
+  listener.close();
+  await once(listener, 'close');
+  return port;
+};
+
+test('failed listen closes config connections before rejecting', async () => {
+  const holder = await startServer(environment(0), createConnections());
+  const address = holder.server.address();
+  assert.ok(address !== null && typeof address === 'object');
+  let closeCalls = 0;
+  const connections = trackedConnections(async () => {
+    closeCalls += 1;
+  });
+
+  try {
+    await assert.rejects(startServer(environment(address.port), connections), /EADDRINUSE/);
+    assert.equal(closeCalls, 1);
+  } finally {
+    await holder.shutdown();
+  }
+});
+
+test('shutdown is idempotent and bounds a hung config close', async () => {
+  let closeCalls = 0;
+  const connections = trackedConnections(async () => {
+    closeCalls += 1;
+    await new Promise<void>(() => undefined);
+  });
+  const running = await startServer(environment(0, 10), connections);
+
+  await Promise.all([running.shutdown(), running.shutdown()]);
+  assert.equal(closeCalls, 1);
+  assert.equal(running.server.listening, false);
+});
+
+test('the development entrypoint serves health and exits on SIGTERM', async () => {
+  const port = await freePort();
+  const child = spawn(process.execPath, ['--import', 'tsx', 'index.ts'], {
+    cwd: process.cwd(),
+    env: {
+      ...process.env,
+      HOST: '127.0.0.1',
+      PORT: String(port),
+      SHUTDOWN_TIMEOUT_MS: '100',
+    },
+    stdio: 'ignore',
+  });
+  const deadline = Date.now() + 5_000;
+  let response: Response | undefined;
+  try {
+    while (Date.now() < deadline) {
+      try {
+        response = await fetch(`http://127.0.0.1:${port}/api/v1/health`);
+        break;
+      } catch {
+        await new Promise<void>((resolve) => setTimeout(resolve, 25));
+      }
+    }
+    assert.ok(response !== undefined, 'child backend did not start');
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { status: 'ok' });
+    child.kill('SIGTERM');
+    const [code, signal] = (await once(child, 'exit')) as [number | null, NodeJS.Signals | null];
+    assert.equal(code, 0);
+    assert.equal(signal, null);
+  } finally {
+    if (child.exitCode === null) child.kill('SIGKILL');
+  }
+});

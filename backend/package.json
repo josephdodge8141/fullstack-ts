@@ -5,7 +5,23 @@
   "type": "module",
   "scripts": {
     "build": "tsc -b",
-    "test": "node --import tsx --test app.test.ts"
+    "dev": "tsx index.ts",
+    "start": "node dist/index.js",
+    "test": "node --import tsx --test app.test.ts index.test.ts"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./app": {
+      "types": "./dist/app.d.ts",
+      "default": "./dist/app.js"
+    },
+    "./config/connections": {
+      "types": "./dist/config/connections.d.ts",
+      "default": "./dist/config/connections.js"
+    }
   },
   "dependencies": {
     "express": "5.2.1",

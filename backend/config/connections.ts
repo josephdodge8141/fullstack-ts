@@ -3,11 +3,26 @@ export interface ConnectionLifecycle {
 }
 
 /**
- * The starter has no external dependency, but its lifecycle is explicit so
- * later services can receive and close config-owned connections.
+ * The narrow outbound contract used by the health service. Config owns the
+ * concrete connection and the service only knows how to ask it for data.
  */
-export function createConnections(): ConnectionLifecycle {
+export interface HealthConnection {
+  getHealth(): unknown;
+}
+
+export interface Connections extends ConnectionLifecycle {
+  readonly health: HealthConnection;
+}
+
+/**
+ * The starter has no external dependency yet, but its connection contract is
+ * explicit so acceptance can replace the outbound adapter later.
+ */
+export function createConnections(): Connections {
   return {
+    health: {
+      getHealth: (): unknown => ({ status: 'ok' }),
+    },
     close: async (): Promise<void> => undefined,
   };
 }

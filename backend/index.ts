@@ -3,7 +3,7 @@ import { createServer, type Server } from 'node:http';
 import { fileURLToPath } from 'node:url';
 
 import { createApp } from './app.js';
-import { createConnections, type ConnectionLifecycle } from './config/connections.js';
+import { createConnections, type Connections } from './config/connections.js';
 import { loadEnvironment, type Environment } from './config/environment.js';
 
 export interface RunningServer {
@@ -28,34 +28,74 @@ async function closeServer(server: Server, timeoutMs: number): Promise<void> {
   if (timer !== undefined) clearTimeout(timer);
 }
 
+async function closeConnections(connections: Connections, timeoutMs: number): Promise<void> {
+  let timer: NodeJS.Timeout | undefined;
+  await Promise.race([
+    connections.close(),
+    new Promise<void>((resolve) => {
+      timer = setTimeout(resolve, timeoutMs);
+      timer.unref();
+    }),
+  ]);
+  if (timer !== undefined) clearTimeout(timer);
+}
+
 export async function startServer(
   environment: Environment = loadEnvironment(),
-  connections: ConnectionLifecycle = createConnections(),
+  connections: Connections = createConnections(),
 ): Promise<RunningServer> {
-  const server = createServer(createApp());
-  await new Promise<void>((resolve, reject) => {
-    const onError = (error: Error): void => reject(error);
-    server.once('error', onError);
-    server.listen(environment.port, environment.host, () => {
-      server.off('error', onError);
-      resolve();
-    });
-  });
+  let server: Server | undefined;
+  let cleanupPromise: Promise<void> | undefined;
+  const cleanupConnections = (): Promise<void> => {
+    cleanupPromise ??= closeConnections(connections, environment.shutdownTimeoutMs);
+    return cleanupPromise;
+  };
 
-  let shuttingDown = false;
+  try {
+    const createdServer = createServer(createApp({ connections }));
+    server = createdServer;
+    await new Promise<void>((resolve, reject) => {
+      const onError = (error: Error): void => reject(error);
+      createdServer.once('error', onError);
+      createdServer.listen(environment.port, environment.host, () => {
+        createdServer.off('error', onError);
+        resolve();
+      });
+    });
+  } catch (error: unknown) {
+    try {
+      if (server !== undefined) await closeServer(server, environment.shutdownTimeoutMs);
+      await cleanupConnections();
+    } catch {
+      // Preserve the startup error; the cleanup attempt remains idempotent.
+    }
+    throw error;
+  }
+
+  const startedServer = server;
+  if (startedServer === undefined) {
+    throw new Error('Server was not created');
+  }
   const shutdown = async (): Promise<void> => {
-    if (shuttingDown) return;
-    shuttingDown = true;
-    await closeServer(server, environment.shutdownTimeoutMs);
-    await connections.close();
+    const currentCleanup = (cleanupPromise ??= (async (): Promise<void> => {
+      await closeServer(startedServer, environment.shutdownTimeoutMs);
+      await closeConnections(connections, environment.shutdownTimeoutMs);
+    })());
+    await currentCleanup;
   };
   const onSignal = (): void => {
-    void shutdown();
+    void shutdownWithCleanup().catch((error: unknown) => {
+      console.error(error);
+      process.exitCode = 1;
+    });
   };
   const shutdownWithCleanup = async (): Promise<void> => {
-    await shutdown();
-    process.off('SIGINT', onSignal);
-    process.off('SIGTERM', onSignal);
+    try {
+      await shutdown();
+    } finally {
+      process.off('SIGINT', onSignal);
+      process.off('SIGTERM', onSignal);
+    }
   };
   process.once('SIGINT', onSignal);
   process.once('SIGTERM', onSignal);

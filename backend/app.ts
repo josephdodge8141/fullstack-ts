@@ -1,17 +1,20 @@
 import express, { type Express } from 'express';
 import helmet from 'helmet';
 
+import { createConnections, type Connections } from './config/connections.js';
 import { errorMiddleware, notFoundMiddleware } from './middleware/errors.js';
 import { createApiRouter } from './routes/index.js';
-import { createHealthService, type HealthService } from './services/health.js';
+import { createHealthService } from './services/health.js';
 
 export interface AppDependencies {
-  readonly healthService?: HealthService;
+  readonly connections: Connections;
 }
 
-export function createApp(dependencies: AppDependencies = {}): Express {
+export function createApp(
+  dependencies: AppDependencies = { connections: createConnections() },
+): Express {
   const app = express();
-  const healthService = dependencies.healthService ?? createHealthService();
+  const healthService = createHealthService(dependencies.connections.health);
 
   app.disable('x-powered-by');
   app.use(helmet());
