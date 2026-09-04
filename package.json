@@ -24,7 +24,8 @@
     "instructions:check": "tsx tooling/gates/instructions.ts",
     "behaviors:check": "tsx packages/cucumber/catalog/cli.ts",
     "test:catalog": "tsx --test packages/cucumber/catalog/*.test.ts",
-    "check": "npm run build:contracts && npm run format:check && npm run lint && npm run typecheck && npm run instructions:check && npm run behaviors:check"
+    "check": "npm run build:contracts && npm run format:check && npm run lint && npm run typecheck && npm run test:instructions && npm run instructions:check && npm run behaviors:check",
+    "test:instructions": "node --import tsx --test tooling/gates/instructions.test.ts"
   },
   "devDependencies": {
     "@cucumber/cucumber": "13.2.1",
