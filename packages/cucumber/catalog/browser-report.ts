@@ -1,4 +1,5 @@
 import {
+  browserCaptureRegistrySchema,
   browserReportSchema,
   type BehaviorCatalog,
   type BrowserExecutionIdentity,
@@ -23,8 +24,15 @@ export class BrowserReportValidationError extends Error {
 export function evaluateBrowserReport(
   catalog: BehaviorCatalog,
   expectedIdentity: BrowserExecutionIdentity,
+  trustedCaptureRegistry: unknown,
   input: unknown,
 ): BrowserReportEvaluation {
+  const captures = browserCaptureRegistrySchema.safeParse(trustedCaptureRegistry);
+  if (!captures.success) {
+    throw new BrowserReportValidationError(
+      `The trusted browser capture registry is malformed: ${z.prettifyError(captures.error)}`,
+    );
+  }
   const parsed = browserReportSchema.safeParse(input);
   if (!parsed.success) {
     throw new BrowserReportValidationError(
@@ -32,19 +40,19 @@ export function evaluateBrowserReport(
     );
   }
   const report = parsed.data;
-  const identityMismatches = [
-    ...(report.candidateSha === expectedIdentity.candidateSha ? [] : ['candidateSha']),
-    ...(report.deploymentGeneration === expectedIdentity.deploymentGeneration
-      ? []
-      : ['deploymentGeneration']),
-    ...(report.workflowRunId === expectedIdentity.workflowRunId ? [] : ['workflowRunId']),
-    ...(report.workflowRunAttempt === expectedIdentity.workflowRunAttempt
-      ? []
-      : ['workflowRunAttempt']),
-  ];
-  if (identityMismatches.length > 0) {
+  validateIdentity(report, expectedIdentity, 'browser report');
+  const evidenceIds = new Set<string>();
+  const duplicateEvidenceIds = new Set<string>();
+  for (const capture of captures.data.captures) {
+    validateIdentity(capture, expectedIdentity, `trusted capture ${capture.id}`);
+    if (evidenceIds.has(capture.id)) {
+      duplicateEvidenceIds.add(capture.id);
+    }
+    evidenceIds.add(capture.id);
+  }
+  if (duplicateEvidenceIds.size > 0) {
     throw new BrowserReportValidationError(
-      `The browser report execution identity does not match: ${identityMismatches.join(', ')}.`,
+      `The trusted browser capture registry contains duplicate capture IDs: ${formatSet(duplicateEvidenceIds)}.`,
     );
   }
 
@@ -73,20 +81,6 @@ export function evaluateBrowserReport(
     ];
     throw new BrowserReportValidationError(
       `The browser report case inventory is not exact (${parts.join('; ')}).`,
-    );
-  }
-
-  const evidenceIds = new Set<string>();
-  const duplicateEvidenceIds = new Set<string>();
-  for (const evidence of report.capturedEvidence) {
-    if (evidenceIds.has(evidence.id)) {
-      duplicateEvidenceIds.add(evidence.id);
-    }
-    evidenceIds.add(evidence.id);
-  }
-  if (duplicateEvidenceIds.size > 0) {
-    throw new BrowserReportValidationError(
-      `The browser report contains duplicate evidence IDs: ${formatSet(duplicateEvidenceIds)}.`,
     );
   }
 
@@ -141,6 +135,26 @@ export function evaluateBrowserReport(
       noop,
     },
   };
+}
+
+function validateIdentity(
+  actual: BrowserExecutionIdentity,
+  expected: BrowserExecutionIdentity,
+  subject: string,
+): void {
+  const mismatches = [
+    ...(actual.candidateSha === expected.candidateSha ? [] : ['candidateSha']),
+    ...(actual.deploymentGeneration === expected.deploymentGeneration
+      ? []
+      : ['deploymentGeneration']),
+    ...(actual.workflowRunId === expected.workflowRunId ? [] : ['workflowRunId']),
+    ...(actual.workflowRunAttempt === expected.workflowRunAttempt ? [] : ['workflowRunAttempt']),
+  ];
+  if (mismatches.length > 0) {
+    throw new BrowserReportValidationError(
+      `The ${subject} execution identity does not match: ${mismatches.join(', ')}.`,
+    );
+  }
 }
 
 function formatSet(values: ReadonlySet<string>): string {

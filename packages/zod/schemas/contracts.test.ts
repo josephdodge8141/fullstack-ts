@@ -4,6 +4,7 @@ import test from 'node:test';
 import {
   authPrincipalSchema,
   authSessionSchema,
+  browserCaptureRegistrySchema,
   browserReportSchema,
   errorResponseSchema,
   healthResponseSchema,
@@ -80,7 +81,6 @@ test('browser report syntax does not itself establish report success', () => {
     deploymentGeneration: 'generation-7',
     workflowRunId: '4123',
     workflowRunAttempt: 2,
-    capturedEvidence: [],
     cases: [
       {
         caseId: 'public.hello',
@@ -92,4 +92,42 @@ test('browser report syntax does not itself establish report success', () => {
   });
 
   assert.equal(parsed.cases[0]?.outcome, 'uncertain');
+  assert.equal(
+    browserReportSchema.safeParse({
+      ...parsed,
+      capturedEvidence: [{ id: 'model-owned-evidence' }],
+    }).success,
+    false,
+  );
+});
+
+test('trusted browser captures bind immutable evidence metadata to one execution identity', () => {
+  const identity = {
+    candidateSha: 'a'.repeat(40),
+    deploymentGeneration: 'generation-7',
+    workflowRunId: '4123',
+    workflowRunAttempt: 2,
+  };
+  const parsed = browserCaptureRegistrySchema.parse({
+    schemaVersion: 1,
+    captures: [
+      {
+        id: 'observation-1',
+        ...identity,
+        kind: 'accessibility',
+        redacted: true,
+        locator: 'workflow-artifact://browser-captures/observation-1.json',
+        contentDigest: `sha256:${'b'.repeat(64)}`,
+      },
+    ],
+  });
+
+  assert.equal(parsed.captures[0]?.candidateSha, identity.candidateSha);
+  assert.equal(
+    browserCaptureRegistrySchema.safeParse({
+      schemaVersion: 1,
+      captures: [{ ...parsed.captures[0], content: 'actual observation stays outside metadata' }],
+    }).success,
+    false,
+  );
 });

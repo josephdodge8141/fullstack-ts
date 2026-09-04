@@ -14,6 +14,7 @@ import {
 } from '@cucumber/messages';
 import {
   behaviorCatalogSchema,
+  behaviorCategorySchema,
   type BehaviorCatalog,
   type BehaviorCase,
   type BehaviorCategory,
@@ -40,6 +41,7 @@ const REASON_PREFIXES = {
 } as const;
 
 export type BehaviorSource = Readonly<{
+  category: BehaviorCategory;
   uri: string;
   data: string;
 }>;
@@ -81,6 +83,7 @@ export function parseBehaviorSources(sources: readonly BehaviorSource[]): Behavi
   const scenarioIds = new Set<string>();
 
   for (const source of sources) {
+    validateSourceOrigin(source);
     const envelopes = generateMessages(
       source.data,
       source.uri,
@@ -134,8 +137,6 @@ export function parseBehaviorSources(sources: readonly BehaviorSource[]): Behavi
 
   const cases: BehaviorCase[] = [];
   const expandedIds = new Set<string>();
-  const pickleIdToCaseId: Record<string, string> = {};
-
   for (const pickle of pickles) {
     const matchingContexts = pickle.astNodeIds.flatMap((astNodeId) => {
       const context = contextByScenarioAstId.get(astNodeId);
@@ -170,17 +171,12 @@ export function parseBehaviorSources(sources: readonly BehaviorSource[]): Behavi
       throw new CatalogValidationError(`Duplicate expanded case identity "${stableCaseId}".`);
     }
     expandedIds.add(stableCaseId);
-    if (pickleIdToCaseId[pickle.id] !== undefined) {
-      throw new CatalogValidationError(`Duplicate Cucumber pickle ID "${pickle.id}".`);
-    }
-    pickleIdToCaseId[pickle.id] = stableCaseId;
     cases.push(buildBehaviorCase(context, pickle, stableCaseId, outlineCase));
   }
 
   return behaviorCatalogSchema.parse({
     schemaVersion: 1,
     cases,
-    pickleIdToCaseId,
   });
 }
 
@@ -188,7 +184,7 @@ export async function loadBehaviorCatalog(featureRoot: string): Promise<Behavior
   const filePaths = await listFeatureFiles(featureRoot);
   const sources = await Promise.all(
     filePaths.map(async (filePath) => ({
-      uri: path.relative(featureRoot, filePath).split(path.sep).join('/'),
+      ...sourceOrigin(path.relative(featureRoot, filePath).split(path.sep).join('/')),
       data: await readFile(filePath, 'utf8'),
     })),
   );
@@ -208,7 +204,7 @@ function collectScenarioContexts(
   const featureBackground = feature.children.find(
     (child) => child.background !== undefined,
   )?.background;
-  const category = categoryForUri(uri);
+  const category = sourceOrigin(uri).category;
   const contexts: ScenarioContext[] = [];
 
   for (const child of feature.children) {
@@ -507,7 +503,6 @@ function buildBehaviorCase(
     id: stableCaseId,
     scenarioId: context.scenarioId,
     ...optionalExample,
-    pickleId: pickle.id,
     category: context.category,
     factoryApplicable: context.category === 'factory',
     featureName: feature.name,
@@ -578,9 +573,41 @@ function convertArgument(pickleStep: PickleStep): CatalogStepArgument | undefine
   return undefined;
 }
 
-function categoryForUri(uri: string): BehaviorCategory {
-  const segments = uri.replaceAll('\\', '/').split('/');
-  return segments.includes('factory') ? 'factory' : 'application';
+function validateSourceOrigin(source: BehaviorSource): void {
+  const parsedCategory = behaviorCategorySchema.safeParse(source.category);
+  if (!parsedCategory.success) {
+    throw new CatalogValidationError(
+      `Unknown behavior source category "${String(source.category)}".`,
+    );
+  }
+  const origin = sourceOrigin(source.uri);
+  if (origin.category !== parsedCategory.data) {
+    throw new CatalogValidationError(
+      `Behavior source category "${parsedCategory.data}" does not match URI root "${origin.category}" for ${source.uri}.`,
+    );
+  }
+}
+
+function sourceOrigin(uri: string): Readonly<{ category: BehaviorCategory; uri: string }> {
+  const normalizedUri = uri.replaceAll('\\', '/');
+  const segments = normalizedUri.split('/');
+  if (
+    normalizedUri.length === 0 ||
+    normalizedUri.startsWith('/') ||
+    segments.some((segment) => segment.length === 0 || segment === '.' || segment === '..')
+  ) {
+    throw new CatalogValidationError(
+      `Behavior source URI "${uri}" is not a canonical relative URI.`,
+    );
+  }
+  const root = segments[0];
+  const category = behaviorCategorySchema.safeParse(root);
+  if (!category.success) {
+    throw new CatalogValidationError(
+      `Behavior source URI "${uri}" has unknown root "${root ?? ''}"; expected application or factory.`,
+    );
+  }
+  return { category: category.data, uri: normalizedUri };
 }
 
 function validateStableIdentifier(value: string, label: string, uri: string, line: number): void {

@@ -48,7 +48,9 @@ test('the canonical catalog expands examples and preserves backgrounds and argum
 
 test('canonical feature files are the catalog source rather than copied text', async () => {
   const publicSource = await readFile(path.join(featureRoot, 'application/public.feature'), 'utf8');
-  const catalog = parseBehaviorSources([{ uri: 'application/public.feature', data: publicSource }]);
+  const catalog = parseBehaviorSources([
+    { category: 'application', uri: 'application/public.feature', data: publicSource },
+  ]);
 
   assert.deepEqual(
     catalog.cases.map((catalogCase) => catalogCase.id),
@@ -78,6 +80,48 @@ test('a scenario without a stable ID is rejected', () => {
     Given a behavior
 `,
     /exactly one @id:<identifier>/i,
+  );
+});
+
+test('source categories and their canonical roots are explicit and fail closed', () => {
+  const source = `Feature: Explicit origin
+  @id:origin.case
+  Scenario: Has an explicit origin
+    Given a behavior
+`;
+
+  assert.throws(
+    () =>
+      parseBehaviorSources([
+        { category: 'factory', uri: 'application/origin.feature', data: source },
+      ]),
+    (error: unknown) =>
+      error instanceof CatalogValidationError &&
+      /category.*root|root.*category/i.test(error.message),
+  );
+  assert.throws(
+    () =>
+      parseBehaviorSources([
+        {
+          category: 'application',
+          uri: 'factroy/origin.feature',
+          data: source,
+        },
+      ]),
+    (error: unknown) =>
+      error instanceof CatalogValidationError && /unknown.*root/i.test(error.message),
+  );
+  assert.throws(
+    () =>
+      parseBehaviorSources([
+        {
+          category: 'unknown',
+          uri: 'unknown/origin.feature',
+          data: source,
+        } as never,
+      ]),
+    (error: unknown) =>
+      error instanceof CatalogValidationError && /unknown.*category/i.test(error.message),
   );
 });
 
@@ -154,7 +198,10 @@ test('a reason without the corresponding no-op tag is illegal', () => {
 
 function assertCatalogError(source: string, pattern: RegExp): void {
   assert.throws(
-    () => parseBehaviorSources([{ uri: 'fixture.feature', data: source }]),
+    () =>
+      parseBehaviorSources([
+        { category: 'application', uri: 'application/fixture.feature', data: source },
+      ]),
     (error: unknown) => error instanceof CatalogValidationError && pattern.test(error.message),
   );
 }

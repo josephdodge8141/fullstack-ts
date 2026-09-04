@@ -6,6 +6,7 @@ import { BrowserReportValidationError, evaluateBrowserReport } from './browser-r
 
 const catalog = parseBehaviorSources([
   {
+    category: 'application',
     uri: 'application/browser.feature',
     data: `Feature: Browser cases
   @id:browser.visible
@@ -27,11 +28,26 @@ const expectedIdentity = {
   workflowRunAttempt: 2,
 };
 
+function validRegistry(): Record<string, unknown> {
+  return {
+    schemaVersion: 1,
+    captures: [
+      {
+        id: 'observation-1',
+        ...expectedIdentity,
+        kind: 'screenshot',
+        redacted: true,
+        locator: 'workflow-artifact://browser-captures/observation-1.png',
+        contentDigest: `sha256:${'c'.repeat(64)}`,
+      },
+    ],
+  };
+}
+
 function validReport(): Record<string, unknown> {
   return {
     schemaVersion: 1,
     ...expectedIdentity,
-    capturedEvidence: [{ id: 'observation-1', kind: 'screenshot', redacted: true }],
     cases: [
       {
         caseId: 'browser.visible',
@@ -49,10 +65,102 @@ function validReport(): Record<string, unknown> {
   };
 }
 
-test('a complete certain browser report is accepted', () => {
-  const result = evaluateBrowserReport(catalog, expectedIdentity, validReport());
+test('a complete report joins runner-held capture provenance and is accepted', () => {
+  const result = evaluateBrowserReport(catalog, expectedIdentity, validRegistry(), validReport());
 
   assert.deepEqual(result.counts, { expected: 2, passed: 1, noop: 1 });
+});
+
+test('the model report cannot self-declare captured evidence or observation contents', () => {
+  for (const modelOwnedEvidence of [
+    {
+      capturedEvidence: [
+        {
+          id: 'invented',
+          kind: 'screenshot',
+          redacted: true,
+          locator: 'workflow-artifact://invented',
+          contentDigest: `sha256:${'d'.repeat(64)}`,
+        },
+      ],
+    },
+    { observationContents: [{ id: 'observation-1', body: 'self-attested page text' }] },
+  ]) {
+    assert.throws(() =>
+      evaluateBrowserReport(catalog, expectedIdentity, validRegistry(), {
+        ...validReport(),
+        ...modelOwnedEvidence,
+      }),
+    );
+  }
+});
+
+test('invented, missing, and cross-run capture references are rejected', () => {
+  const invented = validReport();
+  const firstCase = validCases(invented)[0];
+  invented.cases = [
+    { ...firstCase, evidenceRefs: ['invented-observation'] },
+    validCases(invented)[1],
+  ];
+
+  const crossRunRegistry = validRegistry();
+  crossRunRegistry.captures = validCaptures(crossRunRegistry).map((capture) => ({
+    ...capture,
+    workflowRunAttempt: 3,
+  }));
+
+  assert.throws(() => evaluateBrowserReport(catalog, expectedIdentity, validRegistry(), invented));
+  assert.throws(() =>
+    evaluateBrowserReport(
+      catalog,
+      expectedIdentity,
+      { schemaVersion: 1, captures: [] },
+      validReport(),
+    ),
+  );
+  assert.throws(
+    () => evaluateBrowserReport(catalog, expectedIdentity, crossRunRegistry, validReport()),
+    (error: unknown) =>
+      error instanceof BrowserReportValidationError && /identity|attempt|run/i.test(error.message),
+  );
+});
+
+test('malformed, duplicate, and unredacted trusted captures are rejected', () => {
+  const malformedRegistries: ReadonlyArray<Record<string, unknown>> = [
+    {
+      schemaVersion: 1,
+      captures: validCaptures(validRegistry()).map(({ locator: _locator, ...capture }) => capture),
+    },
+    {
+      schemaVersion: 1,
+      captures: validCaptures(validRegistry()).map((capture) => ({
+        ...capture,
+        contentDigest: 'sha256:not-a-digest',
+      })),
+    },
+    {
+      schemaVersion: 1,
+      captures: validCaptures(validRegistry()).map((capture) => ({
+        ...capture,
+        locator: 'https://mutable.example/observation',
+      })),
+    },
+    {
+      schemaVersion: 1,
+      captures: validCaptures(validRegistry()).map((capture) => ({
+        ...capture,
+        redacted: false,
+      })),
+    },
+    {
+      schemaVersion: 1,
+      captures: [...validCaptures(validRegistry()), ...validCaptures(validRegistry())],
+    },
+  ];
+
+  for (const registry of malformedRegistries) {
+    assert.throws(() => evaluateBrowserReport(catalog, expectedIdentity, registry, validReport()));
+  }
 });
 
 test('missing, extra, and duplicate browser case IDs are rejected', () => {
@@ -74,7 +182,7 @@ test('missing, extra, and duplicate browser case IDs are rejected', () => {
   duplicate.cases = [...validCases(duplicate), validCases(duplicate)[0]];
 
   for (const report of [missing, extra, duplicate]) {
-    assert.throws(() => evaluateBrowserReport(catalog, expectedIdentity, report));
+    assert.throws(() => evaluateBrowserReport(catalog, expectedIdentity, validRegistry(), report));
   }
 });
 
@@ -84,21 +192,10 @@ test('a passing result without an observation is rejected', () => {
   report.cases = [{ ...firstCase, evidenceRefs: [] }, validCases(report)[1]];
 
   assert.throws(
-    () => evaluateBrowserReport(catalog, expectedIdentity, report),
+    () => evaluateBrowserReport(catalog, expectedIdentity, validRegistry(), report),
     (error: unknown) =>
       error instanceof BrowserReportValidationError && /observation/i.test(error.message),
   );
-});
-
-test('an evidence reference absent from captured observations is rejected', () => {
-  const report = validReport();
-  const firstCase = validCases(report)[0];
-  report.cases = [
-    { ...firstCase, evidenceRefs: ['observation-not-captured'] },
-    validCases(report)[1],
-  ];
-
-  assert.throws(() => evaluateBrowserReport(catalog, expectedIdentity, report));
 });
 
 test('a no-op without catalog eligibility is rejected', () => {
@@ -115,7 +212,7 @@ test('a no-op without catalog eligibility is rejected', () => {
   ];
 
   assert.throws(
-    () => evaluateBrowserReport(catalog, expectedIdentity, report),
+    () => evaluateBrowserReport(catalog, expectedIdentity, validRegistry(), report),
     (error: unknown) =>
       error instanceof BrowserReportValidationError && /not eligible/i.test(error.message),
   );
@@ -128,7 +225,7 @@ test('failed and uncertain outcomes cannot approve a report', () => {
     report.cases = [{ ...firstCase, outcome, reason: `${outcome} result` }, validCases(report)[1]];
 
     assert.throws(
-      () => evaluateBrowserReport(catalog, expectedIdentity, report),
+      () => evaluateBrowserReport(catalog, expectedIdentity, validRegistry(), report),
       (error: unknown) =>
         error instanceof BrowserReportValidationError && error.message.includes(outcome),
     );
@@ -145,7 +242,10 @@ test('candidate, generation, run, and attempt mismatches are rejected', () => {
 
   for (const mismatch of mismatches) {
     assert.throws(() =>
-      evaluateBrowserReport(catalog, expectedIdentity, { ...validReport(), ...mismatch }),
+      evaluateBrowserReport(catalog, expectedIdentity, validRegistry(), {
+        ...validReport(),
+        ...mismatch,
+      }),
     );
   }
 });
@@ -154,6 +254,12 @@ function validCases(report: Record<string, unknown>): ReadonlyArray<Record<strin
   const cases = report.cases;
   assert.ok(Array.isArray(cases));
   return cases.filter((entry): entry is Record<string, unknown> => isRecord(entry));
+}
+
+function validCaptures(registry: Record<string, unknown>): ReadonlyArray<Record<string, unknown>> {
+  const captures = registry.captures;
+  assert.ok(Array.isArray(captures));
+  return captures.filter((entry): entry is Record<string, unknown> => isRecord(entry));
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

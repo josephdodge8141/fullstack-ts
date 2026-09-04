@@ -44,7 +44,6 @@ export const behaviorCaseSchema = z.strictObject({
   scenarioId: z.string().trim().min(1),
   caseId: z.string().trim().min(1).optional(),
   example: catalogExampleSchema.optional(),
-  pickleId: z.string().trim().min(1),
   category: behaviorCategorySchema,
   factoryApplicable: z.boolean(),
   featureName: z.string().trim().min(1),
@@ -68,7 +67,6 @@ export const behaviorCaseSchema = z.strictObject({
 export const behaviorCatalogSchema = z.strictObject({
   schemaVersion: z.literal(1),
   cases: z.array(behaviorCaseSchema),
-  pickleIdToCaseId: z.record(z.string(), z.string().trim().min(1)),
 });
 
 export const cucumberResultStatusSchema = z.enum([

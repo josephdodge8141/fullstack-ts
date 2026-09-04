@@ -1,13 +1,13 @@
 import {
-  linkedCaseResultSchema,
   normalizedLayerResultSchema,
   type BehaviorCatalog,
+  type BehaviorLayer,
   type LinkedCaseResult,
   type NormalizedLayerResult,
 } from '@app/schemas';
-import { z } from 'zod';
+import { RuntimeEnvelopeValidationError, normalizeRuntimeEnvelopes } from './runtime-results.js';
 
-type ApplicationLayer = 'backend' | 'frontend';
+const FACTORY_NOOP_REASON = 'Factory execution is not applicable to an application behavior.';
 
 export class LayerResultValidationError extends Error {
   constructor(message: string) {
@@ -18,16 +18,25 @@ export class LayerResultValidationError extends Error {
 
 export function normalizeLayerResults(
   catalog: BehaviorCatalog,
-  layer: ApplicationLayer,
+  layer: BehaviorLayer,
   input: unknown,
 ): NormalizedLayerResult {
-  const parsed = z.array(linkedCaseResultSchema).safeParse(input);
-  if (!parsed.success) {
+  let results: readonly LinkedCaseResult[];
+  try {
+    results = normalizeRuntimeEnvelopes(input);
+  } catch (error: unknown) {
+    if (error instanceof RuntimeEnvelopeValidationError) {
+      throw new LayerResultValidationError(
+        `The ${layer} Cucumber runtime result is invalid: ${error.message}`,
+      );
+    }
+    throw error;
+  }
+  if (results.length === 0) {
     throw new LayerResultValidationError(
-      `The ${layer} result input is malformed: ${z.prettifyError(parsed.error)}`,
+      `The ${layer} Cucumber runtime result contains no executed cases.`,
     );
   }
-  const results: LinkedCaseResult[] = parsed.data;
   const resultIds = new Set<string>();
   const duplicateIds = new Set<string>();
   for (const result of results) {
@@ -43,7 +52,12 @@ export function normalizeLayerResults(
   }
 
   const noops = catalog.cases.flatMap((catalogCase) => {
-    const reason = catalogCase.noops[layer];
+    const reason =
+      layer === 'factory'
+        ? catalogCase.factoryApplicable
+          ? undefined
+          : FACTORY_NOOP_REASON
+        : catalogCase.noops[layer];
     return reason === undefined ? [] : [{ caseId: catalogCase.id, reason }];
   });
   const noopIds = new Set(noops.map((entry) => entry.caseId));

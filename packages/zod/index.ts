@@ -40,10 +40,14 @@ export {
 } from './schemas/behavior.js';
 export {
   browserCaseResultSchema,
+  browserCaptureRegistrySchema,
+  browserCaptureSchema,
   browserEvidenceSchema,
   browserExecutionIdentitySchema,
   browserReportSchema,
   revisionShaSchema,
+  type BrowserCapture,
+  type BrowserCaptureRegistry,
   type BrowserCaseResult,
   type BrowserEvidence,
   type BrowserExecutionIdentity,
