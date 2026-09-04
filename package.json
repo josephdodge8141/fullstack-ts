@@ -1,0 +1,29 @@
+{
+  "name": "fullstack-ts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=24 <27"
+  },
+  "workspaces": [
+    "backend",
+    "frontend",
+    "infra",
+    "packages/zod",
+    "packages/cucumber"
+  ],
+  "scripts": {
+    "build:contracts": "npm run build -w @app/schemas && npm run build -w @app/behaviors",
+    "build": "npm run build:contracts && npm run build -w @app/backend && npm run build -w @app/frontend && npm run build -w @app/infra",
+    "typecheck": "tsc -b && tsc --project tsconfig.tooling.json --noEmit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint . --max-warnings 0",
+    "instructions:check": "tsx tooling/gates/instructions.ts",
+    "behaviors:check": "tsx packages/cucumber/catalog/cli.ts",
+    "test:catalog": "tsx --test packages/cucumber/catalog/*.test.ts",
+    "check": "npm run build:contracts && npm run format:check && npm run lint && npm run typecheck && npm run instructions:check && npm run behaviors:check"
+  }
+}
