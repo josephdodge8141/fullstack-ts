@@ -79,6 +79,29 @@ test('shutdown is idempotent, aborts a hung config close, and reports the timeou
   assert.equal(running.server.listening, false);
 });
 
+test('programmatic shutdown surfaces close and forced cleanup failures', async () => {
+  let abortCalls = 0;
+  const connections = trackedConnections(
+    async () => {
+      throw new Error('close failed');
+    },
+    () => {
+      abortCalls += 1;
+      throw new Error('force abort failed');
+    },
+  );
+  const running = await startServer(environment(0), connections);
+
+  await assert.rejects(running.shutdown(), (error: unknown) => {
+    assert.ok(error instanceof AggregateError);
+    assert.equal(error.cause instanceof Error ? error.cause.message : error.cause, 'close failed');
+    assert.equal(error.errors.length, 2);
+    return true;
+  });
+  assert.equal(abortCalls, 1);
+  assert.equal(running.server.listening, false);
+});
+
 test('the development entrypoint serves health and exits on SIGTERM', async () => {
   const port = await freePort();
   const child = spawn(process.execPath, ['--import', 'tsx', 'index.ts'], {
@@ -116,6 +139,43 @@ test('the development entrypoint serves health and exits on SIGTERM', async () =
 
 test('a signal shutdown aborts a retained resource when config close rejects', async () => {
   const child = spawn(process.execPath, ['--import', 'tsx', 'shutdown-child.ts'], {
+    cwd: process.cwd(),
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  let output = '';
+  const ready = new Promise<void>((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error('child backend did not start')), 5_000);
+    child.stdout.on('data', (chunk: Buffer) => {
+      output += chunk.toString();
+      if (output.includes('ready')) {
+        clearTimeout(timeout);
+        resolve();
+      }
+    });
+    child.once('error', (error: Error) => {
+      clearTimeout(timeout);
+      reject(error);
+    });
+  });
+  try {
+    await ready;
+    child.kill('SIGTERM');
+    const [code, signal] = await Promise.race([
+      once(child, 'exit') as Promise<[number | null, NodeJS.Signals | null]>,
+      new Promise<never>((_, reject) => {
+        const timeout = setTimeout(() => reject(new Error('child did not exit')), 1_000);
+        timeout.unref();
+      }),
+    ]);
+    assert.equal(code, 1);
+    assert.equal(signal, null);
+  } finally {
+    if (child.exitCode === null) child.kill('SIGKILL');
+  }
+});
+
+test('a signal shutdown exits when forced cleanup fails with a retained resource', async () => {
+  const child = spawn(process.execPath, ['--import', 'tsx', 'shutdown-abort-failure-child.ts'], {
     cwd: process.cwd(),
     stdio: ['ignore', 'pipe', 'pipe'],
   });

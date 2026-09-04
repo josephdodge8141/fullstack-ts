@@ -11,6 +11,11 @@ export interface RunningServer {
   shutdown(): Promise<void>;
 }
 
+export interface ServerRuntimeOptions {
+  /** Terminate the executable after a signal cleanup failure. */
+  readonly exitProcess?: (code: number) => void;
+}
+
 export class ConnectionShutdownTimeoutError extends Error {
   constructor(timeoutMs: number, options?: ErrorOptions) {
     super(`Connection shutdown timed out after ${timeoutMs} ms`, options);
@@ -75,6 +80,7 @@ async function closeConnections(connections: Connections, timeoutMs: number): Pr
 export async function startServer(
   environment: Environment = loadEnvironment(),
   connections: Connections = createConnections(),
+  runtime: ServerRuntimeOptions = {},
 ): Promise<RunningServer> {
   let server: Server | undefined;
   let cleanupPromise: Promise<void> | undefined;
@@ -119,6 +125,7 @@ export async function startServer(
     void shutdownWithCleanup().catch((error: unknown) => {
       console.error(error);
       process.exitCode = 1;
+      runtime.exitProcess?.(1);
     });
   };
   const shutdownWithCleanup = async (): Promise<void> => {
@@ -136,8 +143,11 @@ export async function startServer(
 
 const entrypoint = process.argv[1];
 if (entrypoint !== undefined && fileURLToPath(import.meta.url) === entrypoint) {
-  void startServer().catch((error: unknown) => {
-    console.error(error);
-    process.exitCode = 1;
-  });
+  const exitProcess = (code: number): void => process.exit(code);
+  void startServer(loadEnvironment(), createConnections(), { exitProcess }).catch(
+    (error: unknown) => {
+      console.error(error);
+      exitProcess(1);
+    },
+  );
 }
