@@ -95,7 +95,13 @@ export type LifecycleCommand =
   | StatusCommand;
 
 export type LifecyclePhase =
-  'idle' | 'retiring' | 'launching' | 'routing' | 'healthy' | 'cleaning' | 'closed';
+  | 'idle'
+  | 'retiring'
+  | 'launching'
+  | 'routing'
+  | 'healthy'
+  | 'cleaning'
+  | 'closed';
 
 export interface PreviewGeneration {
   id: string;
@@ -108,6 +114,7 @@ export interface PreviewGeneration {
   expiresAt: string | null;
   createToken: string;
   serviceName: string;
+  createObserved: boolean;
   observedTaskId: string | null;
   observedPublicIpv4: string | null;
 }
@@ -127,6 +134,7 @@ export interface LifecycleState {
   phase: LifecyclePhase;
   generation: PreviewGeneration;
   retiringGeneration: PreviewGeneration | null;
+  retiredGenerations: PreviewGeneration[];
   cleanupDisposition: 'idle' | 'closed' | null;
   cleanupConfirmedGenerations: string[];
   lastCommandId: string;
@@ -563,6 +571,7 @@ function parseGeneration(value: unknown, path: string): PreviewGeneration {
       'expiresAt',
       'createToken',
       'serviceName',
+      'createObserved',
       'observedTaskId',
       'observedPublicIpv4',
     ],
@@ -576,6 +585,9 @@ function parseGeneration(value: unknown, path: string): PreviewGeneration {
   const startupDeadline = stringField(record, 'startupDeadline', path);
   const createToken = stringField(record, 'createToken', path);
   const serviceName = stringField(record, 'serviceName', path);
+  if (typeof record.createObserved !== 'boolean') {
+    fail(`${path}.createObserved`, 'expected a boolean');
+  }
   if (ordinal <= 0) {
     fail(`${path}.ordinal`, 'expected a positive generation ordinal');
   }
@@ -601,6 +613,7 @@ function parseGeneration(value: unknown, path: string): PreviewGeneration {
     expiresAt,
     createToken,
     serviceName,
+    createObserved: record.createObserved,
     observedTaskId,
     observedPublicIpv4,
   };
@@ -661,6 +674,7 @@ function parseLifecycleState(value: unknown): LifecycleState {
       'phase',
       'generation',
       'retiringGeneration',
+      'retiredGenerations',
       'cleanupDisposition',
       'cleanupConfirmedGenerations',
       'lastCommandId',
@@ -694,6 +708,22 @@ function parseLifecycleState(value: unknown): LifecycleState {
     record.retiringGeneration === null
       ? null
       : parseGeneration(record.retiringGeneration, `${path}.retiringGeneration`);
+  if (!Array.isArray(record.retiredGenerations)) {
+    fail(`${path}.retiredGenerations`, 'expected an array');
+  }
+  const retiredGenerations = record.retiredGenerations.map((entry, index) =>
+    parseGeneration(entry, `${path}.retiredGenerations[${index}]`),
+  );
+  const knownGenerationIds = [generation.id];
+  if (retiringGeneration !== null) {
+    knownGenerationIds.push(retiringGeneration.id);
+  }
+  for (const retired of retiredGenerations) {
+    if (knownGenerationIds.includes(retired.id)) {
+      fail(`${path}.retiredGenerations`, 'generation identities must be unique');
+    }
+    knownGenerationIds.push(retired.id);
+  }
   if (
     record.cleanupDisposition !== null &&
     record.cleanupDisposition !== 'idle' &&
@@ -722,6 +752,7 @@ function parseLifecycleState(value: unknown): LifecycleState {
     phase,
     generation,
     retiringGeneration,
+    retiredGenerations,
     cleanupDisposition: record.cleanupDisposition,
     cleanupConfirmedGenerations,
     lastCommandId,
@@ -853,6 +884,7 @@ function createGeneration(
     expiresAt: null,
     createToken: `create-${stem}`,
     serviceName: `preview-${stem}`,
+    createObserved: false,
     observedTaskId: null,
     observedPublicIpv4: null,
   };
@@ -898,6 +930,7 @@ function transitionBegin(
       phase: 'launching',
       generation,
       retiringGeneration: null,
+      retiredGenerations: [],
       cleanupDisposition: null,
       cleanupConfirmedGenerations: [],
       lastCommandId: command.commandId,
@@ -935,8 +968,9 @@ function transitionBegin(
     phase: 'retiring',
     generation,
     retiringGeneration,
+    retiredGenerations: state.retiredGenerations,
     cleanupDisposition: null,
-    cleanupConfirmedGenerations: [],
+    cleanupConfirmedGenerations: state.cleanupConfirmedGenerations,
   });
   return accepted(admitted, 'generation-admitted', [
     inspectEffect(admitted, retiringGeneration.id),
@@ -982,6 +1016,7 @@ function transitionReopen(
   });
   return accepted(reopened, 'pull-request-reopened', [
     inspectEffect(reopened, reopened.generation.id),
+    ...reopened.retiredGenerations.map((generation) => inspectEffect(reopened, generation.id)),
   ]);
 }
 
@@ -1027,7 +1062,53 @@ function generationForReconcile(
   if (state.retiringGeneration?.id === generation) {
     return state.retiringGeneration;
   }
-  return null;
+  return state.retiredGenerations.find((retired) => retired.id === generation) ?? null;
+}
+
+function retiredGenerationForReconcile(
+  state: LifecycleState,
+  generation: string,
+): PreviewGeneration | null {
+  return state.retiredGenerations.find((retired) => retired.id === generation) ?? null;
+}
+
+function replaceRetiredGeneration(
+  state: LifecycleState,
+  generation: PreviewGeneration,
+): PreviewGeneration[] {
+  return state.retiredGenerations.map((retired) =>
+    retired.id === generation.id ? generation : retired,
+  );
+}
+
+function addRetiredGeneration(
+  state: LifecycleState,
+  generation: PreviewGeneration,
+): PreviewGeneration[] {
+  return state.retiredGenerations.some((retired) => retired.id === generation.id)
+    ? state.retiredGenerations
+    : [...state.retiredGenerations, generation];
+}
+
+function confirmedGenerations(state: LifecycleState, generation: string): string[] {
+  return state.cleanupConfirmedGenerations.includes(generation)
+    ? state.cleanupConfirmedGenerations
+    : [...state.cleanupConfirmedGenerations, generation];
+}
+
+function unconfirmedGenerations(state: LifecycleState, generation: string): string[] {
+  return state.cleanupConfirmedGenerations.filter((confirmed) => confirmed !== generation);
+}
+
+function compactRetiredGeneration(
+  retiredGenerations: PreviewGeneration[],
+  generation: PreviewGeneration,
+): PreviewGeneration[] {
+  // An initial absent inventory result cannot settle a delayed create. Once an owned
+  // observation has emitted cleanup, a later absent observation settles both intents.
+  return generation.createObserved
+    ? retiredGenerations.filter((retired) => retired.id !== generation.id)
+    : retiredGenerations;
 }
 
 function cleanupEffect(state: LifecycleState, generation: string): LifecycleEffect {
@@ -1063,6 +1144,7 @@ function withObservedRuntime(
 ): PreviewGeneration {
   return {
     ...generation,
+    createObserved: true,
     observedTaskId: observation.taskId,
     observedPublicIpv4: observation.publicIpv4,
   };
@@ -1090,11 +1172,49 @@ function transitionRetiringReconcile(
       scheduleEffect(retiring.id, now),
     ]);
   }
+  const retiredGenerations = addRetiredGeneration(state, retiring);
   const launching = nextState(state, command.commandId, {
     phase: 'launching',
     retiringGeneration: null,
+    retiredGenerations,
+    cleanupConfirmedGenerations: confirmedGenerations(state, retiring.id),
   });
   return accepted(launching, 'retiring-generation-absent', [ensureEffect(launching)]);
+}
+
+function transitionRetiredReconcile(
+  state: LifecycleState,
+  command: ReconcileCommand,
+  now: string,
+  retired: PreviewGeneration,
+): LifecycleTransition {
+  if (command.observation.kind === 'ownership-mismatch') {
+    const updated = nextState(state, command.commandId, {});
+    return accepted(updated, 'ownership-conflict', conflictEffects(updated, command, now));
+  }
+  if (command.observation.kind === 'owned') {
+    const observed = withObservedRuntime(retired, command.observation);
+    const updated = nextState(state, command.commandId, {
+      retiredGenerations: replaceRetiredGeneration(state, observed),
+      cleanupConfirmedGenerations: unconfirmedGenerations(state, command.generation),
+    });
+    return accepted(updated, 'retired-generation-requires-cleanup', [
+      cleanupEffect(updated, command.generation),
+      scheduleEffect(command.generation, now),
+    ]);
+  }
+  const retained = compactRetiredGeneration(state.retiredGenerations, retired);
+  const updated = nextState(state, command.commandId, {
+    retiredGenerations: retained,
+    cleanupConfirmedGenerations: retired.createObserved
+      ? unconfirmedGenerations(state, command.generation)
+      : confirmedGenerations(state, command.generation),
+  });
+  return accepted(
+    updated,
+    retired.createObserved ? 'retired-generation-cleanup-confirmed' : 'retired-create-unresolved',
+    retired.createObserved ? [] : [scheduleEffect(command.generation, now)],
+  );
 }
 
 function transitionCleaningReconcile(
@@ -1107,27 +1227,40 @@ function transitionCleaningReconcile(
     return accepted(updated, 'ownership-conflict', conflictEffects(updated, command, now));
   }
   if (command.observation.kind === 'owned') {
-    const cleanupConfirmedGenerations = state.cleanupConfirmedGenerations.filter(
-      (generation) => generation !== command.generation,
-    );
-    const updated = nextState(state, command.commandId, { cleanupConfirmedGenerations });
+    const retired = retiredGenerationForReconcile(state, command.generation);
+    const updated = nextState(state, command.commandId, {
+      cleanupConfirmedGenerations: unconfirmedGenerations(state, command.generation),
+      retiredGenerations:
+        retired === null
+          ? state.retiredGenerations
+          : replaceRetiredGeneration(state, withObservedRuntime(retired, command.observation)),
+    });
     return accepted(updated, 'owned-generation-requires-cleanup', [
       cleanupEffect(updated, command.generation),
       scheduleEffect(command.generation, now),
     ]);
   }
-  const cleanupConfirmedGenerations = state.cleanupConfirmedGenerations.includes(command.generation)
-    ? state.cleanupConfirmedGenerations
-    : [...state.cleanupConfirmedGenerations, command.generation];
+  const retired = retiredGenerationForReconcile(state, command.generation);
+  const retiredGenerations =
+    retired === null
+      ? state.retiredGenerations
+      : compactRetiredGeneration(state.retiredGenerations, retired);
+  const cleanupConfirmedGenerations = retired?.createObserved
+    ? unconfirmedGenerations(state, command.generation)
+    : confirmedGenerations(state, command.generation);
   const required = [state.generation.id];
   if (state.retiringGeneration !== null) {
     required.push(state.retiringGeneration.id);
   }
+  required.push(...retiredGenerations.map((generation) => generation.id));
   const cleanupComplete = required.every((generation) =>
     cleanupConfirmedGenerations.includes(generation),
   );
   if (!cleanupComplete) {
-    const updated = nextState(state, command.commandId, { cleanupConfirmedGenerations });
+    const updated = nextState(state, command.commandId, {
+      cleanupConfirmedGenerations,
+      retiredGenerations,
+    });
     const unconfirmed = required.find(
       (generation) => !cleanupConfirmedGenerations.includes(generation),
     );
@@ -1140,6 +1273,7 @@ function transitionCleaningReconcile(
   const completed = nextState(state, command.commandId, {
     phase,
     retiringGeneration: null,
+    retiredGenerations,
     cleanupConfirmedGenerations,
   });
   return accepted(completed, 'cleanup-completed', []);
@@ -1150,7 +1284,8 @@ function transitionTerminalReconcile(
   command: ReconcileCommand,
   now: string,
 ): LifecycleTransition {
-  if (command.generation !== state.generation.id) {
+  const retired = retiredGenerationForReconcile(state, command.generation);
+  if (command.generation !== state.generation.id && retired === null) {
     return rejected(state, 'generation-is-not-actionable');
   }
   if (command.observation.kind === 'ownership-mismatch') {
@@ -1159,14 +1294,29 @@ function transitionTerminalReconcile(
   }
   if (command.observation.kind === 'owned') {
     const updated = nextState(state, command.commandId, {
-      cleanupConfirmedGenerations: state.cleanupConfirmedGenerations.filter(
-        (generation) => generation !== command.generation,
-      ),
+      cleanupConfirmedGenerations: unconfirmedGenerations(state, command.generation),
+      retiredGenerations:
+        retired === null
+          ? state.retiredGenerations
+          : replaceRetiredGeneration(state, withObservedRuntime(retired, command.observation)),
     });
     return accepted(updated, 'orphaned-owned-generation', [
       cleanupEffect(updated, command.generation),
       scheduleEffect(command.generation, now),
     ]);
+  }
+  if (retired !== null) {
+    const updated = nextState(state, command.commandId, {
+      retiredGenerations: compactRetiredGeneration(state.retiredGenerations, retired),
+      cleanupConfirmedGenerations: retired.createObserved
+        ? unconfirmedGenerations(state, command.generation)
+        : confirmedGenerations(state, command.generation),
+    });
+    return accepted(
+      updated,
+      retired.createObserved ? 'retired-generation-cleanup-confirmed' : 'retired-create-unresolved',
+      retired.createObserved ? [] : [scheduleEffect(command.generation, now)],
+    );
   }
   return duplicate(state, 'generation-remains-absent');
 }
@@ -1239,14 +1389,18 @@ function transitionReconcile(
   if (command.expectedStateRevision !== state.stateRevision) {
     return rejected(state, 'state-revision-mismatch');
   }
-  if (state.phase === 'retiring') {
-    return transitionRetiringReconcile(state, command, now);
-  }
   if (state.phase === 'cleaning') {
     return transitionCleaningReconcile(state, command, now);
   }
   if (state.phase === 'closed' || state.phase === 'idle') {
     return transitionTerminalReconcile(state, command, now);
+  }
+  const retired = retiredGenerationForReconcile(state, command.generation);
+  if (retired !== null) {
+    return transitionRetiredReconcile(state, command, now, retired);
+  }
+  if (state.phase === 'retiring') {
+    return transitionRetiringReconcile(state, command, now);
   }
   if (command.generation !== state.generation.id) {
     return rejected(state, 'generation-is-not-actionable');
@@ -1336,12 +1490,15 @@ function transitionDestroy(
     pullRequest,
     phase: 'cleaning',
     cleanupDisposition: closesPullRequest ? 'closed' : 'idle',
-    cleanupConfirmedGenerations: [],
+    cleanupConfirmedGenerations: state.cleanupConfirmedGenerations.filter((generation) =>
+      state.retiredGenerations.some((retired) => retired.id === generation),
+    ),
   });
   const generations = [cleanup.generation.id];
   if (cleanup.retiringGeneration !== null) {
     generations.push(cleanup.retiringGeneration.id);
   }
+  generations.push(...cleanup.retiredGenerations.map((generation) => generation.id));
   return accepted(
     cleanup,
     'cleanup-requested',

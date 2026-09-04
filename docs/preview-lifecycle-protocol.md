@@ -42,6 +42,8 @@ The state phases are `idle`, `retiring`, `launching`, `routing`, `healthy`, `cle
 
 A successful `begin` computes the deterministic generation ID, ECS service name, and create token, and records `admittedAt` plus a startup deadline exactly 30 minutes later. The state adapter must commit this intent before executing the returned `ensure-generation` effect. The deadline includes cleanup of a preceding generation. Redeploy first enters `retiring`; only an observation that the old owned generation is absent moves the new generation to `launching`.
 
+`retiringGeneration` is the generation that blocks the immediate replacement, while `retiredGenerations` is a durable cleanup ledger. Every retired generation moves into that ledger after its retirement observation, because an absent observation can race a delayed ECS create. The ledger survives later redeploys, cleanup, closed tombstones, and reopen. An owned inventory observation for any recorded retired generation emits ownership-checked cleanup and cannot change the current generation. The reducer compacts an entry only after it has observed the generation owned, persisted the cleanup effect, and later receives an absent observation. An initial absent observation leaves the entry durable because it cannot prove that an asynchronous create has settled.
+
 The first `complete` accepted for a routed generation records `healthyAt` and an expiry exactly four hours later. Duplicate health, late health for an old or cleaning generation, reconciliation, and ECS task replacement cannot alter either timestamp. A cancellation before completion requests cleanup. A delayed runner-cancellation command after successful completion is rejected, leaving the healthy preview to close or expire. Close and merge always request cleanup.
 
 The important transitions are:
@@ -53,6 +55,7 @@ The important transitions are:
 | Closed tombstone, current open PR            | `reopen`                             | Move to `idle`; inspect retained deterministic generation for a late orphan                |
 | Existing generation, current newer admission | `begin`                              | Persist new generation as desired, enter `retiring`, inspect old generation                |
 | Retiring old generation is absent            | `reconcile`                          | Enter `launching`, then `ensure-generation` for the already-recorded new generation        |
+| Any recorded retired generation appears late | `reconcile`                          | Keep the current generation unchanged and emit ownership-checked cleanup for the old ID    |
 | Launching generation is absent               | `reconcile`                          | Repeat the same deterministic `ensure-generation`; this recovers a lost create response    |
 | Owned running generation has an address      | `reconcile`                          | Enter or remain `routing`; synchronize owned DNS when missing or stale                     |
 | Routed generation before deadline            | `complete`                           | Enter `healthy`; record one fixed four-hour expiry                                         |
@@ -75,7 +78,7 @@ The reducer emits these adapter effects:
 
 Every effect that can create, update DNS, stop compute, or remove runtime carries `expectedOwnership`. The AWS executor must re-read and compare ECS tags and the DNS ownership marker immediately before each destructive mutation. It uses exact prior DNS values in one Route 53 change batch, stops service capacity and tasks before retiring a task definition, and never deletes shared network, zone, registry, cluster, or certificate storage. A mismatch emits diagnostics and schedules another inspection; it does not guess ownership or delete by a caller-supplied ARN.
 
-The permanent sweeper reads overdue and nonterminal records once per minute, inventories resources only within the dedicated preview cluster and enrolled namespace, and invokes the same `reconcile` transitions. This recovers lost runners, uncertain create/delete responses, late ECS creates, task replacement, DNS drift, expiry, and owned orphans that outlive an incomplete state write. Database TTL applies only to old metadata after cleanup and is not the cleanup timer.
+The permanent sweeper reads overdue and nonterminal records once per minute, inventories resources only within the dedicated preview cluster and enrolled namespace, and invokes the same `reconcile` transitions. It supplies a generation from the durable retirement ledger when it finds an owned old resource, so this recovers lost runners, uncertain create/delete responses, late ECS creates, task replacement, DNS drift, expiry, and owned orphans that outlive an incomplete state write. Database TTL applies only to metadata that an adapter has safely compacted after confirmed absence and settled intents; it is not the cleanup timer.
 
 ## Future adapter interfaces
 

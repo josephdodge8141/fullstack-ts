@@ -27,9 +27,10 @@ Feature: Ordered preview lifecycle
     frontend-noop: Runtime creation and reconciliation have no generated application frontend interaction.
     browser-noop: An uncertain ECS create response cannot be distinguished from its reconciled result through the public preview page.
     Given the generation intent and deterministic runtime identity were recorded before launch
-    When the create response is lost or a close arrives while creation is in flight
+    When the create response is lost, later redeploys supersede it, or a close arrives while creation is in flight
     Then reconciliation finds or recreates the same owned generation idempotently
-    And cleanup removes any late owned runtime without reviving the preview
+    And cleanup removes any late owned runtime without reviving or deleting the current preview
+    And the cleanup identity survives close and reopen until settled runtime intents are confirmed
 
   @id:factory.lifecycle.fixed-expiry @backend-noop @frontend-noop @browser-noop-eligible
   Scenario: Start one fixed expiry after successful health

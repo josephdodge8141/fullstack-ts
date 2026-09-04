@@ -302,6 +302,121 @@ describe('GitHub admission authority and close/reopen fences', () => {
 });
 
 describe('create, cleanup, and reconciliation races', () => {
+  it('retains cleanup intent for every late create across redeploys and close/reopen', () => {
+    const openA = authority('W/"pr-open-a"', 'open');
+    let state = acceptedState(null, begin('begin-a', openA.pullRequestVersion, null), T0, openA);
+    const generationA = state.generation.id;
+
+    const openB = authority('W/"pr-open-b"', 'open', CANDIDATE_B);
+    state = acceptedState(
+      state,
+      begin('begin-b', openB.pullRequestVersion, state.stateRevision, CANDIDATE_B, CONTROL_B),
+      T1,
+      openB,
+    );
+    state = acceptedState(
+      state,
+      reconcile('a-absent-before-late-create', state, { kind: 'absent' }, generationA),
+      T2,
+    );
+
+    const openC = authority('W/"pr-open-c"', 'open');
+    const generationB = state.generation.id;
+    state = acceptedState(
+      state,
+      begin('begin-c', openC.pullRequestVersion, state.stateRevision),
+      T3,
+      openC,
+    );
+    state = acceptedState(
+      state,
+      reconcile('b-retired', state, { kind: 'absent' }, generationB),
+      T4,
+    );
+    const generationC = state.generation.id;
+
+    const closed = authority('W/"pr-closed-d"', 'closed');
+    state = acceptedState(
+      state,
+      destroy('close-c', state, 'pull-request-closed', closed.pullRequestVersion),
+      T4,
+      closed,
+    );
+    state = acceptedState(
+      state,
+      reconcile('c-cleaned', state, { kind: 'absent' }, generationC),
+      T5,
+    );
+    assert.equal(state.phase, 'closed');
+
+    const reopened = authority('W/"pr-reopened-e"', 'open');
+    state = acceptedState(
+      state,
+      reopen('reopen-after-late-a', reopened.pullRequestVersion, state.stateRevision),
+      T5,
+      reopened,
+    );
+    const lateA = apply(
+      state,
+      reconcile(
+        'late-a-after-two-redeploys-and-reopen',
+        state,
+        {
+          kind: 'owned',
+          runtime: 'running',
+          taskId: 'later-a-task',
+          publicIpv4: '192.0.2.24',
+          routing: 'matches',
+        },
+        generationA,
+      ),
+      T5,
+    );
+    assert.equal(lateA.decision, 'accepted');
+    assert.equal(lateA.effects[0]?.type, 'cleanup-owned-generation');
+    assert.equal(lateA.state?.generation.id, generationC);
+    const cleanup = lateA.effects[0];
+    assert.ok(cleanup && 'expectedOwnership' in cleanup);
+    assert.equal(cleanup.expectedOwnership.generation, generationA);
+
+    const stateAfterLateA = lateA.state as LifecycleState;
+    const lateB = apply(
+      stateAfterLateA,
+      reconcile(
+        'late-b-after-two-redeploys-and-reopen',
+        stateAfterLateA,
+        {
+          kind: 'owned',
+          runtime: 'running',
+          taskId: 'later-b-task',
+          publicIpv4: '192.0.2.24',
+          routing: 'matches',
+        },
+        generationB,
+      ),
+      T5,
+    );
+    assert.equal(lateB.decision, 'accepted');
+    assert.equal(lateB.effects[0]?.type, 'cleanup-owned-generation');
+    assert.equal(lateB.state?.generation.id, generationC);
+
+    state = acceptedState(
+      lateB.state,
+      reconcile(
+        'a-absent-after-observed-cleanup',
+        lateB.state as LifecycleState,
+        { kind: 'absent' },
+        generationA,
+      ),
+      T5,
+    );
+    assert.equal(state.generation.id, generationC);
+    assert.equal(
+      state.retiredGenerations.some((generation) => generation.id === generationA),
+      false,
+    );
+  });
+
   it('records intent before launch and recovers a lost create response', () => {
     const open = authority('W/"pr-open-a"', 'open');
     const state = acceptedState(null, begin('begin-1', open.pullRequestVersion, null), T0, open);
