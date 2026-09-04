@@ -15,5 +15,8 @@
       "types": "./dist/server.d.ts",
       "default": "./dist/server.js"
     }
+  },
+  "dependencies": {
+    "zod": "4.5.4"
   }
 }

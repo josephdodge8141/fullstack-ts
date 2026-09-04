@@ -25,5 +25,32 @@
     "behaviors:check": "tsx packages/cucumber/catalog/cli.ts",
     "test:catalog": "tsx --test packages/cucumber/catalog/*.test.ts",
     "check": "npm run build:contracts && npm run format:check && npm run lint && npm run typecheck && npm run instructions:check && npm run behaviors:check"
+  },
+  "devDependencies": {
+    "@cucumber/cucumber": "13.2.1",
+    "@cucumber/gherkin": "42.0.1",
+    "@cucumber/messages": "34.2.1",
+    "@eslint/js": "10.0.1",
+    "@playwright/test": "1.62.1",
+    "@types/aws-lambda": "8.10.163",
+    "@types/express": "5.0.6",
+    "@types/express-session": "1.19.0",
+    "@types/node": "24.13.3",
+    "@types/pg": "8.23.1",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.7",
+    "@vitejs/plugin-react": "6.1.1",
+    "aws-cdk": "2.1140.0",
+    "esbuild": "0.28.2",
+    "eslint": "10.10.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "eslint-plugin-react-refresh": "0.5.6",
+    "globals": "17.12.0",
+    "jiti": "2.7.0",
+    "prettier": "3.9.6",
+    "tsx": "4.23.13",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.69.0",
+    "yaml": "2.9.0"
   }
 }
