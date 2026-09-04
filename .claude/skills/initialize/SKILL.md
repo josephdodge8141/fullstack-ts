@@ -33,14 +33,14 @@ Do not add a business CRUD sample, seed system, cloud dependency, or external lo
 
 Use a concise initialization record with values or references for the selected items:
 
-| Area | Required decisions |
-| --- | --- |
-| Repository | Owner/name, default branch, visibility, whether remote enrollment is requested; public is the starter default |
-| Application | Display name, local port choices only if defaults conflict, optional database/provider dependencies |
+| Area                | Required decisions                                                                                                                                                             |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Repository          | Owner/name, default branch, visibility, whether remote enrollment is requested; public is the starter default                                                                  |
+| Application         | Display name, local port choices only if defaults conflict, optional database/provider dependencies                                                                            |
 | User authentication | Bundled Keycloak realm/client setup, exact callback/logout URLs, session configuration and private synthetic test-identity references; v1 covers login, logout and signup only |
-| Preview platform | AWS account and region, preview zone name and hosted-zone ID, delegation owner, existing or new shared platform resources |
-| GitHub to AWS | OIDC trust, actual token subject format for this repository, deployment role and browser-inference role, required workflow variables and secrets |
-| Browser agent | Bedrock endpoint/region, supported OpenAI model or inference-profile ID, model access and provider settings |
+| Preview platform    | AWS account and region, preview zone name and hosted-zone ID, delegation owner, existing or new shared platform resources                                                      |
+| GitHub to AWS       | OIDC trust, actual token subject format for this repository, deployment role and browser-inference role, required workflow variables and secrets                               |
+| Browser agent       | Bedrock endpoint/region, supported OpenAI model or inference-profile ID, model access and provider settings                                                                    |
 
 Application OIDC login and GitHub OIDC federation into AWS are separate trust relationships. Configuring one does not configure the other.
 

@@ -78,7 +78,8 @@ export async function checkInstructions(
   const canonicalSet = new Set(canonicalNames);
   const mirrorSet = new Set(mirrorNames);
   for (const name of mirrorNames.sort()) {
-    if (!canonicalSet.has(name)) errors.push(`.agents/skills/${name}/SKILL.md has no canonical source`);
+    if (!canonicalSet.has(name))
+      errors.push(`.agents/skills/${name}/SKILL.md has no canonical source`);
   }
   for (const name of canonicalNames.sort()) {
     const canonicalPath = `.claude/skills/${name}/SKILL.md`;
@@ -107,6 +108,9 @@ async function main(): Promise<void> {
   }
 }
 
-if (process.argv[1] !== undefined && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (
+  process.argv[1] !== undefined &&
+  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+) {
   await main();
 }

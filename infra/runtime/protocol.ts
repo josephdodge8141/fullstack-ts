@@ -95,13 +95,7 @@ export type LifecycleCommand =
   | StatusCommand;
 
 export type LifecyclePhase =
-  | 'idle'
-  | 'retiring'
-  | 'launching'
-  | 'routing'
-  | 'healthy'
-  | 'cleaning'
-  | 'closed';
+  'idle' | 'retiring' | 'launching' | 'routing' | 'healthy' | 'cleaning' | 'closed';
 
 export interface PreviewGeneration {
   id: string;

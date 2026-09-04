@@ -4,8 +4,5 @@
     "composite": false,
     "noEmit": true
   },
-  "include": [
-    "tooling/**/*.ts",
-    "eslint.config.ts"
-  ]
+  "include": ["tooling/**/*.ts", "eslint.config.ts"]
 }

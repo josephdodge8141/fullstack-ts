@@ -4,14 +4,8 @@
     "rootDir": ".",
     "outDir": "dist"
   },
-  "include": [
-    "**/*.ts",
-    "**/*.tsx"
-  ],
-  "exclude": [
-    "dist",
-    "node_modules"
-  ],
+  "include": ["**/*.ts", "**/*.tsx"],
+  "exclude": ["dist", "node_modules"],
   "references": [
     {
       "path": "../zod"
