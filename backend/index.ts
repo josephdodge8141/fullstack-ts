@@ -38,13 +38,29 @@ async function closeServer(server: Server, timeoutMs: number): Promise<void> {
 
 async function closeConnections(connections: Connections, timeoutMs: number): Promise<void> {
   let timer: NodeJS.Timeout | undefined;
-  const result = await Promise.race([
-    connections.close().then(() => 'closed' as const),
-    new Promise<'timeout'>((resolve) => {
-      timer = setTimeout(() => resolve('timeout'), timeoutMs);
-      if (timer !== undefined) timer.unref();
-    }),
-  ]);
+  let result: 'closed' | 'timeout';
+  try {
+    result = await Promise.race([
+      connections.close().then(() => 'closed' as const),
+      new Promise<'timeout'>((resolve) => {
+        timer = setTimeout(() => resolve('timeout'), timeoutMs);
+        if (timer !== undefined) timer.unref();
+      }),
+    ]);
+  } catch (error: unknown) {
+    try {
+      connections.forceAbort();
+    } catch (abortError: unknown) {
+      throw new AggregateError(
+        [error, abortError],
+        'Connection close failed and forced cleanup failed',
+        { cause: error },
+      );
+    } finally {
+      if (timer !== undefined) clearTimeout(timer);
+    }
+    throw error;
+  }
   if (timer !== undefined) clearTimeout(timer);
   if (result === 'timeout') {
     try {

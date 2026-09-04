@@ -5,7 +5,7 @@ const retainedHandle = setInterval(() => undefined, 1_000);
 const connections: Connections = {
   ...createConnections(),
   close: async (): Promise<void> => {
-    await new Promise<void>(() => undefined);
+    throw new Error('close failed');
   },
   forceAbort: (): void => {
     clearInterval(retainedHandle);

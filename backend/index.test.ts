@@ -114,7 +114,7 @@ test('the development entrypoint serves health and exits on SIGTERM', async () =
   }
 });
 
-test('a signal shutdown aborts a retained resource so the child exits', async () => {
+test('a signal shutdown aborts a retained resource when config close rejects', async () => {
   const child = spawn(process.execPath, ['--import', 'tsx', 'shutdown-child.ts'], {
     cwd: process.cwd(),
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -137,7 +137,13 @@ test('a signal shutdown aborts a retained resource so the child exits', async ()
   try {
     await ready;
     child.kill('SIGTERM');
-    const [code, signal] = (await once(child, 'exit')) as [number | null, NodeJS.Signals | null];
+    const [code, signal] = await Promise.race([
+      once(child, 'exit') as Promise<[number | null, NodeJS.Signals | null]>,
+      new Promise<never>((_, reject) => {
+        const timeout = setTimeout(() => reject(new Error('child did not exit')), 1_000);
+        timeout.unref();
+      }),
+    ]);
     assert.equal(code, 1);
     assert.equal(signal, null);
   } finally {
