@@ -1,7 +1,7 @@
 import express, { type Express } from 'express';
 import helmet from 'helmet';
 
-import { createConnections, type Connections } from './config/connections.js';
+import type { Connections } from './config/connections.js';
 import { errorMiddleware, notFoundMiddleware } from './middleware/errors.js';
 import { createApiRouter } from './routes/index.js';
 import { createHealthService } from './services/health.js';
@@ -10,9 +10,7 @@ export interface AppDependencies {
   readonly connections: Connections;
 }
 
-export function createApp(
-  dependencies: AppDependencies = { connections: createConnections() },
-): Express {
+export function createApp(dependencies: AppDependencies): Express {
   const app = express();
   const healthService = createHealthService(dependencies.connections.health);
 

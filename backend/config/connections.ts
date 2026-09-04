@@ -1,5 +1,7 @@
 export interface ConnectionLifecycle {
   close(): Promise<void>;
+  /** Abort all retained resources synchronously and idempotently. */
+  forceAbort(): void;
 }
 
 /**
@@ -24,5 +26,6 @@ export function createConnections(): Connections {
       getHealth: (): unknown => ({ status: 'ok' }),
     },
     close: async (): Promise<void> => undefined,
+    forceAbort: (): void => undefined,
   };
 }

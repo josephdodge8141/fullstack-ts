@@ -11,6 +11,13 @@ export interface RunningServer {
   shutdown(): Promise<void>;
 }
 
+export class ConnectionShutdownTimeoutError extends Error {
+  constructor(timeoutMs: number, options?: ErrorOptions) {
+    super(`Connection shutdown timed out after ${timeoutMs} ms`, options);
+    this.name = 'ConnectionShutdownTimeoutError';
+  }
+}
+
 async function closeServer(server: Server, timeoutMs: number): Promise<void> {
   if (!server.listening) return;
   server.close();
@@ -19,6 +26,7 @@ async function closeServer(server: Server, timeoutMs: number): Promise<void> {
     once(server, 'close').then(() => undefined),
     new Promise<void>((resolve) => {
       timer = setTimeout(() => {
+        server.closeIdleConnections();
         server.closeAllConnections();
         resolve();
       }, timeoutMs);
@@ -30,14 +38,22 @@ async function closeServer(server: Server, timeoutMs: number): Promise<void> {
 
 async function closeConnections(connections: Connections, timeoutMs: number): Promise<void> {
   let timer: NodeJS.Timeout | undefined;
-  await Promise.race([
-    connections.close(),
-    new Promise<void>((resolve) => {
-      timer = setTimeout(resolve, timeoutMs);
-      timer.unref();
+  const result = await Promise.race([
+    connections.close().then(() => 'closed' as const),
+    new Promise<'timeout'>((resolve) => {
+      timer = setTimeout(() => resolve('timeout'), timeoutMs);
+      if (timer !== undefined) timer.unref();
     }),
   ]);
   if (timer !== undefined) clearTimeout(timer);
+  if (result === 'timeout') {
+    try {
+      connections.forceAbort();
+    } catch (error: unknown) {
+      throw new ConnectionShutdownTimeoutError(timeoutMs, { cause: error });
+    }
+    throw new ConnectionShutdownTimeoutError(timeoutMs);
+  }
 }
 
 export async function startServer(

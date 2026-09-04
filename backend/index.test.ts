@@ -20,9 +20,13 @@ const environment = (
   shutdownTimeoutMs,
 });
 
-const trackedConnections = (close: () => Promise<void>): Connections => ({
+const trackedConnections = (
+  close: () => Promise<void>,
+  forceAbort: () => void = (): void => undefined,
+): Connections => ({
   ...createConnections(),
   close,
+  forceAbort,
 });
 
 const freePort = async (): Promise<number> => {
@@ -53,16 +57,25 @@ test('failed listen closes config connections before rejecting', async () => {
   }
 });
 
-test('shutdown is idempotent and bounds a hung config close', async () => {
+test('shutdown is idempotent, aborts a hung config close, and reports the timeout', async () => {
   let closeCalls = 0;
-  const connections = trackedConnections(async () => {
-    closeCalls += 1;
-    await new Promise<void>(() => undefined);
-  });
+  let abortCalls = 0;
+  const connections = trackedConnections(
+    async () => {
+      closeCalls += 1;
+      await new Promise<void>(() => undefined);
+    },
+    () => {
+      abortCalls += 1;
+    },
+  );
   const running = await startServer(environment(0, 10), connections);
 
-  await Promise.all([running.shutdown(), running.shutdown()]);
+  await assert.rejects(Promise.all([running.shutdown(), running.shutdown()]), {
+    name: 'ConnectionShutdownTimeoutError',
+  });
   assert.equal(closeCalls, 1);
+  assert.equal(abortCalls, 1);
   assert.equal(running.server.listening, false);
 });
 
@@ -95,6 +108,37 @@ test('the development entrypoint serves health and exits on SIGTERM', async () =
     child.kill('SIGTERM');
     const [code, signal] = (await once(child, 'exit')) as [number | null, NodeJS.Signals | null];
     assert.equal(code, 0);
+    assert.equal(signal, null);
+  } finally {
+    if (child.exitCode === null) child.kill('SIGKILL');
+  }
+});
+
+test('a signal shutdown aborts a retained resource so the child exits', async () => {
+  const child = spawn(process.execPath, ['--import', 'tsx', 'shutdown-child.ts'], {
+    cwd: process.cwd(),
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  let output = '';
+  const ready = new Promise<void>((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error('child backend did not start')), 5_000);
+    child.stdout.on('data', (chunk: Buffer) => {
+      output += chunk.toString();
+      if (output.includes('ready')) {
+        clearTimeout(timeout);
+        resolve();
+      }
+    });
+    child.once('error', (error: Error) => {
+      clearTimeout(timeout);
+      reject(error);
+    });
+  });
+  try {
+    await ready;
+    child.kill('SIGTERM');
+    const [code, signal] = (await once(child, 'exit')) as [number | null, NodeJS.Signals | null];
+    assert.equal(code, 1);
     assert.equal(signal, null);
   } finally {
     if (child.exitCode === null) child.kill('SIGKILL');
