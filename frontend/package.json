@@ -4,7 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc -b && vite build"
+    "build": "tsc -b && vite build",
+    "dev": "vite --port 4173",
+    "test:unit": "node --import tsx --test services/*.test.ts",
+    "test:browser": "playwright test"
   },
   "dependencies": {
     "react": "19.2.8",
