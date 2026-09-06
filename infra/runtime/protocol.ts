@@ -1,122 +1,70 @@
 export const LIFECYCLE_PROTOCOL_VERSION = 1 as const;
 export const STARTUP_DURATION_MS = 30 * 60 * 1_000;
 export const EXPIRY_DURATION_MS = 4 * 60 * 60 * 1_000;
-const RECONCILE_INTERVAL_MS = 60 * 1_000;
 
 export interface PreviewIdentity {
   repositoryId: string;
   pullRequestNumber: number;
-  pullRequestNodeId: string;
-}
-
-export interface AdmissionClaim {
-  source: 'github-rest-pull-request-etag';
-  pullRequestVersion: string;
-}
-
-export interface GithubPullRequestAuthority {
-  source: 'github-rest-pull-request-etag';
-  fetchedAt: string;
-  identity: PreviewIdentity;
-  pullRequestVersion: string;
-  state: 'open' | 'closed';
-  headSha: string;
 }
 
 interface CommandBase {
   protocolVersion: typeof LIFECYCLE_PROTOCOL_VERSION;
   commandId: string;
-  identity: PreviewIdentity;
+  eventSequence: number;
   expectedStateRevision: number | null;
+  identity: PreviewIdentity;
 }
 
-export interface BeginCommand extends CommandBase {
-  type: 'begin';
-  admission: AdmissionClaim;
-  candidateSha: string;
-  controlSha: string;
+export interface AdmitCommand extends CommandBase {
+  type: 'admit';
+  revision: string;
 }
 
-export interface ReopenCommand extends CommandBase {
-  type: 'reopen';
-  admission: AdmissionClaim;
-  candidateSha: string;
-  controlSha: string;
-  expectedStateRevision: number;
-}
-
-export interface CompleteCommand extends CommandBase {
-  type: 'complete';
+export interface HealthCommand extends CommandBase {
+  type: 'healthy';
   generation: string;
 }
 
-export type RuntimeObservation =
-  | { kind: 'absent' }
-  | {
-      kind: 'owned';
-      runtime: 'creating' | 'running' | 'stopping';
-      taskId: string | null;
-      publicIpv4: string | null;
-      routing: 'missing' | 'matches' | 'stale';
-    }
-  | { kind: 'ownership-mismatch'; actualOwner: string };
+export interface DeadlineCommand extends CommandBase {
+  type: 'deadline';
+  generation: string;
+  deadline: 'startup' | 'expiry';
+}
+
+export interface CloseCommand extends CommandBase {
+  type: 'close';
+}
+
+export interface CleanupCompleteCommand extends CommandBase {
+  type: 'cleanup-complete';
+  generation: string;
+}
 
 export interface ReconcileCommand extends CommandBase {
   type: 'reconcile';
-  generation: string;
-  observation: RuntimeObservation;
-}
-
-export type DestroyReason =
-  | 'pull-request-closed'
-  | 'pull-request-merged'
-  | 'runner-cancelled'
-  | 'startup-timeout'
-  | 'expired'
-  | 'owner-requested';
-
-export interface DestroyCommand extends CommandBase {
-  type: 'destroy';
-  generation: string;
-  reason: DestroyReason;
-  admission: AdmissionClaim | null;
-}
-
-export interface StatusCommand extends CommandBase {
-  type: 'status';
 }
 
 export type LifecycleCommand =
-  | BeginCommand
-  | ReopenCommand
-  | CompleteCommand
-  | ReconcileCommand
-  | DestroyCommand
-  | StatusCommand;
+  | AdmitCommand
+  | HealthCommand
+  | DeadlineCommand
+  | CloseCommand
+  | CleanupCompleteCommand
+  | ReconcileCommand;
 
-export type LifecyclePhase =
-  'idle' | 'retiring' | 'launching' | 'routing' | 'healthy' | 'cleaning' | 'closed';
+export type GenerationPhase = 'launching' | 'healthy' | 'cleaning';
+export type CleanupReason = 'replaced' | 'closed' | 'startup-timeout' | 'expired';
 
 export interface PreviewGeneration {
   id: string;
   ordinal: number;
-  candidateSha: string;
-  controlSha: string;
+  revision: string;
   admittedAt: string;
   startupDeadline: string;
   healthyAt: string | null;
   expiresAt: string | null;
-  createToken: string;
-  serviceName: string;
-  createObserved: boolean;
-  observedTaskId: string | null;
-  observedPublicIpv4: string | null;
-}
-
-export interface AcceptedPullRequestState {
-  pullRequestVersion: string;
-  state: 'open' | 'closed';
-  headSha: string;
+  phase: GenerationPhase;
+  cleanupReason: CleanupReason | null;
 }
 
 export interface LifecycleState {
@@ -124,61 +72,27 @@ export interface LifecycleState {
   identity: PreviewIdentity;
   stateRevision: number;
   generationCounter: number;
-  pullRequest: AcceptedPullRequestState;
-  phase: LifecyclePhase;
-  generation: PreviewGeneration;
-  retiringGeneration: PreviewGeneration | null;
-  retiredGenerations: PreviewGeneration[];
-  cleanupDisposition: 'idle' | 'closed' | null;
-  cleanupConfirmedGenerations: string[];
+  lastEventSequence: number;
   lastCommandId: string;
+  closed: boolean;
+  active: PreviewGeneration | null;
+  retiring: PreviewGeneration | null;
 }
 
-export interface ExpectedOwnership {
-  identity: PreviewIdentity;
+export interface PreviewOwnership extends PreviewIdentity {
   generation: string;
 }
 
 export type LifecycleEffect =
-  | {
-      type: 'ensure-generation';
-      generation: PreviewGeneration;
-      expectedOwnership: ExpectedOwnership;
-    }
-  | {
-      type: 'inspect-generation';
-      generation: string;
-      expectedOwnership: ExpectedOwnership;
-    }
-  | {
-      type: 'cleanup-owned-generation';
-      generation: string;
-      expectedOwnership: ExpectedOwnership;
-    }
-  | {
-      type: 'sync-owned-routing';
-      generation: string;
-      taskId: string;
-      publicIpv4: string;
-      expectedOwnership: ExpectedOwnership;
-    }
-  | {
-      type: 'report-ownership-conflict';
-      generation: string;
-      actualOwner: string;
-      expectedOwnership: ExpectedOwnership;
-    }
-  | {
-      type: 'schedule-reconcile';
-      generation: string;
-      notBefore: string;
-    };
+  | { type: 'ensure-preview'; ownership: PreviewOwnership; generation: PreviewGeneration }
+  | { type: 'cleanup-preview'; ownership: PreviewOwnership; reason: CleanupReason };
 
 export type TransitionDecision = 'accepted' | 'duplicate' | 'rejected';
 
 export interface LifecycleTransition {
   decision: TransitionDecision;
   reason: string;
+  retryable: boolean;
   state: LifecycleState | null;
   effects: LifecycleEffect[];
 }
@@ -187,7 +101,6 @@ export interface LifecycleTransitionInput {
   state: LifecycleState | null;
   command: LifecycleCommand;
   now: string;
-  currentAuthority: GithubPullRequestAuthority | null;
 }
 
 export interface RuntimeSchema<T> {
@@ -198,1341 +111,401 @@ function fail(path: string, detail: string): never {
   throw new TypeError(`${path}: ${detail}`);
 }
 
-function asRecord(value: unknown, path: string): Record<string, unknown> {
+function record(value: unknown, path: string): Record<string, unknown> {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     return fail(path, 'expected an object');
   }
   return value as Record<string, unknown>;
 }
 
-function exactKeys(
-  record: Record<string, unknown>,
-  allowed: readonly string[],
-  path: string,
-): void {
-  const unknownKey = Object.keys(record).find((key) => !allowed.includes(key));
-  if (unknownKey !== undefined) {
-    fail(`${path}.${unknownKey}`, 'unknown field');
-  }
-  for (const key of allowed) {
-    if (!(key in record)) {
-      fail(`${path}.${key}`, 'missing field');
-    }
-  }
+function keys(value: Record<string, unknown>, expected: readonly string[], path: string): void {
+  const unexpected = Object.keys(value).find((key) => !expected.includes(key));
+  if (unexpected !== undefined) fail(`${path}.${unexpected}`, 'unknown field');
+  const missing = expected.find((key) => !(key in value));
+  if (missing !== undefined) fail(`${path}.${missing}`, 'missing field');
 }
 
-function stringField(record: Record<string, unknown>, key: string, path: string): string {
-  const value = record[key];
-  if (typeof value !== 'string') {
-    return fail(`${path}.${key}`, 'expected a string');
+function string(value: Record<string, unknown>, key: string, path: string): string {
+  const field = value[key];
+  if (typeof field !== 'string' || field.length === 0 || field.length > 256) {
+    return fail(`${path}.${key}`, 'expected 1 to 256 characters');
+  }
+  return field;
+}
+
+function integer(value: Record<string, unknown>, key: string, path: string, minimum = 0): number {
+  const field = value[key];
+  if (typeof field !== 'number' || !Number.isSafeInteger(field) || field < minimum) {
+    return fail(`${path}.${key}`, `expected an integer of at least ${String(minimum)}`);
+  }
+  return field;
+}
+
+function nullableString(value: Record<string, unknown>, key: string, path: string): string | null {
+  return value[key] === null ? null : string(value, key, path);
+}
+
+function timestamp(value: string, path: string): string {
+  const parsed = Date.parse(value);
+  if (!Number.isFinite(parsed) || new Date(parsed).toISOString() !== value) {
+    return fail(path, 'expected a canonical ISO timestamp');
   }
   return value;
 }
 
-function integerField(record: Record<string, unknown>, key: string, path: string): number {
-  const value = record[key];
-  if (typeof value !== 'number' || !Number.isSafeInteger(value)) {
-    return fail(`${path}.${key}`, 'expected a safe integer');
-  }
+function sha(value: string, path: string): string {
+  if (!/^[0-9a-f]{40}$/.test(value)) return fail(path, 'expected a lowercase 40 character Git SHA');
   return value;
 }
 
-function nullableIntegerField(
-  record: Record<string, unknown>,
-  key: string,
-  path: string,
-): number | null {
-  const value = record[key];
-  if (value === null) {
-    return null;
-  }
-  return integerField(record, key, path);
-}
-
-function requireNonempty(value: string, path: string): void {
-  if (value.length === 0 || value.length > 256) {
-    fail(path, 'expected 1 to 256 characters');
-  }
-}
-
-function requireSha(value: string, path: string): void {
-  if (!/^[0-9a-f]{40}$/.test(value)) {
-    fail(path, 'expected a lowercase 40 character Git SHA');
-  }
-}
-
-function requireCommandId(value: string, path: string): void {
-  if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(value)) {
-    fail(path, 'expected a stable command identifier');
-  }
-}
-
-function requireIsoDateTime(value: string, path: string): void {
-  const milliseconds = Date.parse(value);
-  if (!Number.isFinite(milliseconds) || new Date(milliseconds).toISOString() !== value) {
-    fail(path, 'expected a canonical ISO date-time');
-  }
-}
-
-function parseIdentity(value: unknown, path: string): PreviewIdentity {
-  const record = asRecord(value, path);
-  exactKeys(record, ['repositoryId', 'pullRequestNumber', 'pullRequestNodeId'], path);
-  const repositoryId = stringField(record, 'repositoryId', path);
-  if (!/^[1-9][0-9]*$/.test(repositoryId)) {
-    fail(`${path}.repositoryId`, 'expected the immutable numeric GitHub repository ID');
-  }
-  const pullRequestNumber = integerField(record, 'pullRequestNumber', path);
-  if (pullRequestNumber <= 0) {
-    fail(`${path}.pullRequestNumber`, 'expected a positive pull request number');
-  }
-  const pullRequestNodeId = stringField(record, 'pullRequestNodeId', path);
-  requireNonempty(pullRequestNodeId, `${path}.pullRequestNodeId`);
-  return { repositoryId, pullRequestNumber, pullRequestNodeId };
-}
-
-function parseAdmissionClaim(value: unknown, path: string): AdmissionClaim {
-  const record = asRecord(value, path);
-  exactKeys(record, ['source', 'pullRequestVersion'], path);
-  if (record.source !== 'github-rest-pull-request-etag') {
-    fail(`${path}.source`, 'unsupported admission authority');
-  }
-  const pullRequestVersion = stringField(record, 'pullRequestVersion', path);
-  requireNonempty(pullRequestVersion, `${path}.pullRequestVersion`);
-  return { source: 'github-rest-pull-request-etag', pullRequestVersion };
-}
-
-function parseCommandBase(
-  record: Record<string, unknown>,
-  allowed: readonly string[],
-  path: string,
-): {
-  commandId: string;
-  identity: PreviewIdentity;
-  expectedStateRevision: number | null;
-} {
-  exactKeys(record, allowed, path);
-  if (record.protocolVersion !== LIFECYCLE_PROTOCOL_VERSION) {
-    fail(`${path}.protocolVersion`, `expected ${LIFECYCLE_PROTOCOL_VERSION}`);
-  }
-  const commandId = stringField(record, 'commandId', path);
-  requireCommandId(commandId, `${path}.commandId`);
-  const identity = parseIdentity(record.identity, `${path}.identity`);
-  const expectedStateRevision = nullableIntegerField(record, 'expectedStateRevision', path);
-  if (expectedStateRevision !== null && expectedStateRevision < 0) {
-    fail(`${path}.expectedStateRevision`, 'expected a non-negative revision or null');
-  }
-  return { commandId, identity, expectedStateRevision };
-}
-
-function parseBeginCommand(record: Record<string, unknown>, path: string): BeginCommand {
-  const base = parseCommandBase(
-    record,
-    [
-      'protocolVersion',
-      'type',
-      'commandId',
-      'identity',
-      'expectedStateRevision',
-      'admission',
-      'candidateSha',
-      'controlSha',
-    ],
-    path,
-  );
-  const admission = parseAdmissionClaim(record.admission, `${path}.admission`);
-  const candidateSha = stringField(record, 'candidateSha', path);
-  const controlSha = stringField(record, 'controlSha', path);
-  requireSha(candidateSha, `${path}.candidateSha`);
-  requireSha(controlSha, `${path}.controlSha`);
+function identity(value: unknown, path: string): PreviewIdentity {
+  const parsed = record(value, path);
+  keys(parsed, ['repositoryId', 'pullRequestNumber'], path);
   return {
-    protocolVersion: LIFECYCLE_PROTOCOL_VERSION,
-    type: 'begin',
-    ...base,
-    admission,
-    candidateSha,
-    controlSha,
+    repositoryId: string(parsed, 'repositoryId', path),
+    pullRequestNumber: integer(parsed, 'pullRequestNumber', path, 1),
   };
 }
 
-function parseReopenCommand(record: Record<string, unknown>, path: string): ReopenCommand {
-  const beginCommand = parseBeginCommand({ ...record, type: 'begin' }, path);
-  if (beginCommand.expectedStateRevision === null) {
-    fail(`${path}.expectedStateRevision`, 'reopen requires an existing state revision');
-  }
-  return {
-    ...beginCommand,
-    type: 'reopen',
-    expectedStateRevision: beginCommand.expectedStateRevision,
-  };
-}
-
-function parseGenerationCommandBase(
-  record: Record<string, unknown>,
-  allowed: readonly string[],
-  path: string,
-): ReturnType<typeof parseCommandBase> & { generation: string } {
-  const base = parseCommandBase(record, allowed, path);
-  const generation = stringField(record, 'generation', path);
-  requireNonempty(generation, `${path}.generation`);
-  return { ...base, generation };
-}
-
-function parseCompleteCommand(record: Record<string, unknown>, path: string): CompleteCommand {
-  const base = parseGenerationCommandBase(
-    record,
-    ['protocolVersion', 'type', 'commandId', 'identity', 'expectedStateRevision', 'generation'],
-    path,
-  );
-  return { protocolVersion: LIFECYCLE_PROTOCOL_VERSION, type: 'complete', ...base };
-}
-
-function parseObservation(value: unknown, path: string): RuntimeObservation {
-  const record = asRecord(value, path);
-  const kind = stringField(record, 'kind', path);
-  if (kind === 'absent') {
-    exactKeys(record, ['kind'], path);
-    return { kind };
-  }
-  if (kind === 'ownership-mismatch') {
-    exactKeys(record, ['kind', 'actualOwner'], path);
-    const actualOwner = stringField(record, 'actualOwner', path);
-    requireNonempty(actualOwner, `${path}.actualOwner`);
-    return { kind, actualOwner };
-  }
-  if (kind !== 'owned') {
-    return fail(`${path}.kind`, 'unsupported observation kind');
-  }
-  exactKeys(record, ['kind', 'runtime', 'taskId', 'publicIpv4', 'routing'], path);
+function base(value: Record<string, unknown>, path: string): CommandBase {
+  const protocolVersion = integer(value, 'protocolVersion', path, 1);
+  if (protocolVersion !== LIFECYCLE_PROTOCOL_VERSION)
+    fail(`${path}.protocolVersion`, 'unsupported version');
+  const expected = value.expectedStateRevision;
   if (
-    record.runtime !== 'creating' &&
-    record.runtime !== 'running' &&
-    record.runtime !== 'stopping'
+    expected !== null &&
+    (typeof expected !== 'number' || !Number.isSafeInteger(expected) || expected < 0)
   ) {
-    fail(`${path}.runtime`, 'unsupported runtime state');
+    fail(`${path}.expectedStateRevision`, 'expected null or a non-negative integer');
   }
-  if (record.routing !== 'missing' && record.routing !== 'matches' && record.routing !== 'stale') {
-    fail(`${path}.routing`, 'unsupported routing state');
-  }
-  if (record.taskId !== null && typeof record.taskId !== 'string') {
-    fail(`${path}.taskId`, 'expected a string or null');
-  }
-  if (record.publicIpv4 !== null && typeof record.publicIpv4 !== 'string') {
-    fail(`${path}.publicIpv4`, 'expected a string or null');
-  }
-  return {
-    kind,
-    runtime: record.runtime,
-    taskId: record.taskId,
-    publicIpv4: record.publicIpv4,
-    routing: record.routing,
-  };
-}
-
-function parseReconcileCommand(record: Record<string, unknown>, path: string): ReconcileCommand {
-  const base = parseGenerationCommandBase(
-    record,
-    [
-      'protocolVersion',
-      'type',
-      'commandId',
-      'identity',
-      'expectedStateRevision',
-      'generation',
-      'observation',
-    ],
-    path,
-  );
-  const observation = parseObservation(record.observation, `${path}.observation`);
   return {
     protocolVersion: LIFECYCLE_PROTOCOL_VERSION,
-    type: 'reconcile',
-    ...base,
-    observation,
+    commandId: string(value, 'commandId', path),
+    eventSequence: integer(value, 'eventSequence', path, 1),
+    expectedStateRevision: expected,
+    identity: identity(value.identity, `${path}.identity`),
   };
 }
 
-function parseDestroyCommand(record: Record<string, unknown>, path: string): DestroyCommand {
-  const base = parseGenerationCommandBase(
-    record,
-    [
-      'protocolVersion',
-      'type',
-      'commandId',
-      'identity',
-      'expectedStateRevision',
-      'generation',
-      'reason',
-      'admission',
-    ],
-    path,
-  );
-  const reason = stringField(record, 'reason', path);
-  if (
-    reason !== 'pull-request-closed' &&
-    reason !== 'pull-request-merged' &&
-    reason !== 'runner-cancelled' &&
-    reason !== 'startup-timeout' &&
-    reason !== 'expired' &&
-    reason !== 'owner-requested'
-  ) {
-    fail(`${path}.reason`, 'unsupported destroy reason');
+function parseCommand(value: unknown): LifecycleCommand {
+  const parsed = record(value, 'command');
+  const type = string(parsed, 'type', 'command');
+  const common = [
+    'protocolVersion',
+    'type',
+    'commandId',
+    'eventSequence',
+    'expectedStateRevision',
+    'identity',
+  ];
+  if (type === 'admit') {
+    keys(parsed, [...common, 'revision'], 'command');
+    return {
+      ...base(parsed, 'command'),
+      type,
+      revision: sha(string(parsed, 'revision', 'command'), 'command.revision'),
+    };
   }
-  const admission =
-    record.admission === null ? null : parseAdmissionClaim(record.admission, `${path}.admission`);
-  return {
-    protocolVersion: LIFECYCLE_PROTOCOL_VERSION,
-    type: 'destroy',
-    ...base,
-    reason,
-    admission,
-  };
-}
-
-function parseStatusCommand(record: Record<string, unknown>, path: string): StatusCommand {
-  const base = parseCommandBase(
-    record,
-    ['protocolVersion', 'type', 'commandId', 'identity', 'expectedStateRevision'],
-    path,
-  );
-  return { protocolVersion: LIFECYCLE_PROTOCOL_VERSION, type: 'status', ...base };
-}
-
-function parseLifecycleCommand(value: unknown): LifecycleCommand {
-  const path = 'command';
-  const record = asRecord(value, path);
-  const type = stringField(record, 'type', path);
-  switch (type) {
-    case 'begin':
-      return parseBeginCommand(record, path);
-    case 'reopen':
-      return parseReopenCommand(record, path);
-    case 'complete':
-      return parseCompleteCommand(record, path);
-    case 'reconcile':
-      return parseReconcileCommand(record, path);
-    case 'destroy':
-      return parseDestroyCommand(record, path);
-    case 'status':
-      return parseStatusCommand(record, path);
-    default:
-      return fail(`${path}.type`, 'unsupported command type');
+  if (type === 'healthy' || type === 'cleanup-complete') {
+    keys(parsed, [...common, 'generation'], 'command');
+    return {
+      ...base(parsed, 'command'),
+      type,
+      generation: string(parsed, 'generation', 'command'),
+    };
   }
-}
-
-function parseAuthority(value: unknown): GithubPullRequestAuthority {
-  const path = 'authority';
-  const record = asRecord(value, path);
-  exactKeys(
-    record,
-    ['source', 'fetchedAt', 'identity', 'pullRequestVersion', 'state', 'headSha'],
-    path,
-  );
-  if (record.source !== 'github-rest-pull-request-etag') {
-    fail(`${path}.source`, 'unsupported admission authority');
+  if (type === 'deadline') {
+    keys(parsed, [...common, 'generation', 'deadline'], 'command');
+    const deadline = string(parsed, 'deadline', 'command');
+    if (deadline !== 'startup' && deadline !== 'expiry')
+      fail('command.deadline', 'unsupported deadline');
+    return {
+      ...base(parsed, 'command'),
+      type,
+      generation: string(parsed, 'generation', 'command'),
+      deadline,
+    };
   }
-  const fetchedAt = stringField(record, 'fetchedAt', path);
-  requireIsoDateTime(fetchedAt, `${path}.fetchedAt`);
-  const identity = parseIdentity(record.identity, `${path}.identity`);
-  const pullRequestVersion = stringField(record, 'pullRequestVersion', path);
-  requireNonempty(pullRequestVersion, `${path}.pullRequestVersion`);
-  if (record.state !== 'open' && record.state !== 'closed') {
-    fail(`${path}.state`, 'expected open or closed');
+  if (type === 'close' || type === 'reconcile') {
+    keys(parsed, common, 'command');
+    return { ...base(parsed, 'command'), type };
   }
-  const headSha = stringField(record, 'headSha', path);
-  requireSha(headSha, `${path}.headSha`);
-  return {
-    source: 'github-rest-pull-request-etag',
-    fetchedAt,
-    identity,
-    pullRequestVersion,
-    state: record.state,
-    headSha,
-  };
+  return fail('command.type', 'unsupported command type');
 }
 
 function parseGeneration(value: unknown, path: string): PreviewGeneration {
-  const record = asRecord(value, path);
-  exactKeys(
-    record,
+  const parsed = record(value, path);
+  keys(
+    parsed,
     [
       'id',
       'ordinal',
-      'candidateSha',
-      'controlSha',
+      'revision',
       'admittedAt',
       'startupDeadline',
       'healthyAt',
       'expiresAt',
-      'createToken',
-      'serviceName',
-      'createObserved',
-      'observedTaskId',
-      'observedPublicIpv4',
+      'phase',
+      'cleanupReason',
     ],
     path,
   );
-  const id = stringField(record, 'id', path);
-  const ordinal = integerField(record, 'ordinal', path);
-  const candidateSha = stringField(record, 'candidateSha', path);
-  const controlSha = stringField(record, 'controlSha', path);
-  const admittedAt = stringField(record, 'admittedAt', path);
-  const startupDeadline = stringField(record, 'startupDeadline', path);
-  const createToken = stringField(record, 'createToken', path);
-  const serviceName = stringField(record, 'serviceName', path);
-  if (typeof record.createObserved !== 'boolean') {
-    fail(`${path}.createObserved`, 'expected a boolean');
+  const phase = string(parsed, 'phase', path);
+  if (phase !== 'launching' && phase !== 'healthy' && phase !== 'cleaning')
+    fail(`${path}.phase`, 'unsupported phase');
+  const cleanupReason = nullableString(parsed, 'cleanupReason', path);
+  if (
+    cleanupReason !== null &&
+    !['replaced', 'closed', 'startup-timeout', 'expired'].includes(cleanupReason)
+  ) {
+    fail(`${path}.cleanupReason`, 'unsupported cleanup reason');
   }
-  if (ordinal <= 0) {
-    fail(`${path}.ordinal`, 'expected a positive generation ordinal');
-  }
-  requireNonempty(id, `${path}.id`);
-  requireSha(candidateSha, `${path}.candidateSha`);
-  requireSha(controlSha, `${path}.controlSha`);
-  requireIsoDateTime(admittedAt, `${path}.admittedAt`);
-  requireIsoDateTime(startupDeadline, `${path}.startupDeadline`);
-  requireNonempty(createToken, `${path}.createToken`);
-  requireNonempty(serviceName, `${path}.serviceName`);
-  const healthyAt = nullableDateField(record, 'healthyAt', path);
-  const expiresAt = nullableDateField(record, 'expiresAt', path);
-  const observedTaskId = nullableStringField(record, 'observedTaskId', path);
-  const observedPublicIpv4 = nullableStringField(record, 'observedPublicIpv4', path);
+  const healthyAt = nullableString(parsed, 'healthyAt', path);
+  const expiresAt = nullableString(parsed, 'expiresAt', path);
+  if (healthyAt !== null) timestamp(healthyAt, `${path}.healthyAt`);
+  if (expiresAt !== null) timestamp(expiresAt, `${path}.expiresAt`);
+  if ((phase === 'healthy') !== (healthyAt !== null && expiresAt !== null))
+    fail(path, 'health timestamps do not match phase');
+  if ((phase === 'cleaning') !== (cleanupReason !== null))
+    fail(path, 'cleanup reason does not match phase');
   return {
-    id,
-    ordinal,
-    candidateSha,
-    controlSha,
-    admittedAt,
-    startupDeadline,
+    id: string(parsed, 'id', path),
+    ordinal: integer(parsed, 'ordinal', path, 1),
+    revision: sha(string(parsed, 'revision', path), `${path}.revision`),
+    admittedAt: timestamp(string(parsed, 'admittedAt', path), `${path}.admittedAt`),
+    startupDeadline: timestamp(string(parsed, 'startupDeadline', path), `${path}.startupDeadline`),
     healthyAt,
     expiresAt,
-    createToken,
-    serviceName,
-    createObserved: record.createObserved,
-    observedTaskId,
-    observedPublicIpv4,
+    phase,
+    cleanupReason: cleanupReason as CleanupReason | null,
   };
 }
 
-function nullableDateField(
-  record: Record<string, unknown>,
-  key: string,
-  path: string,
-): string | null {
-  const value = record[key];
-  if (value === null) {
-    return null;
-  }
-  const date = stringField(record, key, path);
-  requireIsoDateTime(date, `${path}.${key}`);
-  return date;
-}
-
-function nullableStringField(
-  record: Record<string, unknown>,
-  key: string,
-  path: string,
-): string | null {
-  const value = record[key];
-  if (value === null) {
-    return null;
-  }
-  const text = stringField(record, key, path);
-  requireNonempty(text, `${path}.${key}`);
-  return text;
-}
-
-function parsePullRequestState(value: unknown, path: string): AcceptedPullRequestState {
-  const record = asRecord(value, path);
-  exactKeys(record, ['pullRequestVersion', 'state', 'headSha'], path);
-  const pullRequestVersion = stringField(record, 'pullRequestVersion', path);
-  requireNonempty(pullRequestVersion, `${path}.pullRequestVersion`);
-  if (record.state !== 'open' && record.state !== 'closed') {
-    fail(`${path}.state`, 'expected open or closed');
-  }
-  const headSha = stringField(record, 'headSha', path);
-  requireSha(headSha, `${path}.headSha`);
-  return { pullRequestVersion, state: record.state, headSha };
-}
-
-function parseLifecycleState(value: unknown): LifecycleState {
-  const path = 'state';
-  const record = asRecord(value, path);
-  exactKeys(
-    record,
+function parseState(value: unknown): LifecycleState {
+  const parsed = record(value, 'state');
+  keys(
+    parsed,
     [
       'protocolVersion',
       'identity',
       'stateRevision',
       'generationCounter',
-      'pullRequest',
-      'phase',
-      'generation',
-      'retiringGeneration',
-      'retiredGenerations',
-      'cleanupDisposition',
-      'cleanupConfirmedGenerations',
+      'lastEventSequence',
       'lastCommandId',
+      'closed',
+      'active',
+      'retiring',
     ],
-    path,
+    'state',
   );
-  if (record.protocolVersion !== LIFECYCLE_PROTOCOL_VERSION) {
-    fail(`${path}.protocolVersion`, `expected ${LIFECYCLE_PROTOCOL_VERSION}`);
-  }
-  const identity = parseIdentity(record.identity, `${path}.identity`);
-  const stateRevision = integerField(record, 'stateRevision', path);
-  const generationCounter = integerField(record, 'generationCounter', path);
-  if (stateRevision <= 0 || generationCounter <= 0) {
-    fail(path, 'state and generation revisions must be positive');
-  }
-  const pullRequest = parsePullRequestState(record.pullRequest, `${path}.pullRequest`);
-  const phase = stringField(record, 'phase', path);
-  if (
-    phase !== 'idle' &&
-    phase !== 'retiring' &&
-    phase !== 'launching' &&
-    phase !== 'routing' &&
-    phase !== 'healthy' &&
-    phase !== 'cleaning' &&
-    phase !== 'closed'
-  ) {
-    fail(`${path}.phase`, 'unsupported lifecycle phase');
-  }
-  const generation = parseGeneration(record.generation, `${path}.generation`);
-  const retiringGeneration =
-    record.retiringGeneration === null
-      ? null
-      : parseGeneration(record.retiringGeneration, `${path}.retiringGeneration`);
-  if (!Array.isArray(record.retiredGenerations)) {
-    fail(`${path}.retiredGenerations`, 'expected an array');
-  }
-  const retiredGenerations = record.retiredGenerations.map((entry, index) =>
-    parseGeneration(entry, `${path}.retiredGenerations[${index}]`),
-  );
-  const knownGenerationIds = [generation.id];
-  if (retiringGeneration !== null) {
-    knownGenerationIds.push(retiringGeneration.id);
-  }
-  for (const retired of retiredGenerations) {
-    if (knownGenerationIds.includes(retired.id)) {
-      fail(`${path}.retiredGenerations`, 'generation identities must be unique');
-    }
-    knownGenerationIds.push(retired.id);
-  }
-  if (
-    record.cleanupDisposition !== null &&
-    record.cleanupDisposition !== 'idle' &&
-    record.cleanupDisposition !== 'closed'
-  ) {
-    fail(`${path}.cleanupDisposition`, 'expected idle, closed, or null');
-  }
-  if (!Array.isArray(record.cleanupConfirmedGenerations)) {
-    fail(`${path}.cleanupConfirmedGenerations`, 'expected an array');
-  }
-  const cleanupConfirmedGenerations = record.cleanupConfirmedGenerations.map((entry, index) => {
-    if (typeof entry !== 'string') {
-      return fail(`${path}.cleanupConfirmedGenerations[${index}]`, 'expected a string');
-    }
-    requireNonempty(entry, `${path}.cleanupConfirmedGenerations[${index}]`);
-    return entry;
-  });
-  const lastCommandId = stringField(record, 'lastCommandId', path);
-  requireCommandId(lastCommandId, `${path}.lastCommandId`);
+  const protocolVersion = integer(parsed, 'protocolVersion', 'state', 1);
+  if (protocolVersion !== LIFECYCLE_PROTOCOL_VERSION)
+    fail('state.protocolVersion', 'unsupported version');
+  const active = parsed.active === null ? null : parseGeneration(parsed.active, 'state.active');
+  const retiring =
+    parsed.retiring === null ? null : parseGeneration(parsed.retiring, 'state.retiring');
+  if (retiring !== null && retiring.phase !== 'cleaning')
+    fail('state.retiring.phase', 'must be cleaning');
+  if (typeof parsed.closed !== 'boolean') fail('state.closed', 'expected a boolean');
   return {
     protocolVersion: LIFECYCLE_PROTOCOL_VERSION,
-    identity,
-    stateRevision,
-    generationCounter,
-    pullRequest,
-    phase,
-    generation,
-    retiringGeneration,
-    retiredGenerations,
-    cleanupDisposition: record.cleanupDisposition,
-    cleanupConfirmedGenerations,
-    lastCommandId,
+    identity: identity(parsed.identity, 'state.identity'),
+    stateRevision: integer(parsed, 'stateRevision', 'state'),
+    generationCounter: integer(parsed, 'generationCounter', 'state'),
+    lastEventSequence: integer(parsed, 'lastEventSequence', 'state', 1),
+    lastCommandId: string(parsed, 'lastCommandId', 'state'),
+    closed: parsed.closed,
+    active,
+    retiring,
   };
 }
 
-export const lifecycleCommandSchema: RuntimeSchema<LifecycleCommand> = {
-  parse: parseLifecycleCommand,
-};
+export const lifecycleCommandSchema: RuntimeSchema<LifecycleCommand> = { parse: parseCommand };
+export const lifecycleStateSchema: RuntimeSchema<LifecycleState> = { parse: parseState };
 
-export const githubPullRequestAuthoritySchema: RuntimeSchema<GithubPullRequestAuthority> = {
-  parse: parseAuthority,
-};
-
-export const lifecycleStateSchema: RuntimeSchema<LifecycleState> = {
-  parse: parseLifecycleState,
-};
-
-function identitiesEqual(left: PreviewIdentity, right: PreviewIdentity): boolean {
+function sameIdentity(left: PreviewIdentity, right: PreviewIdentity): boolean {
   return (
-    left.repositoryId === right.repositoryId &&
-    left.pullRequestNumber === right.pullRequestNumber &&
-    left.pullRequestNodeId === right.pullRequestNodeId
+    left.repositoryId === right.repositoryId && left.pullRequestNumber === right.pullRequestNumber
   );
 }
 
-function isoAfter(value: string, milliseconds: number): string {
-  return new Date(Date.parse(value) + milliseconds).toISOString();
+function owned(identityValue: PreviewIdentity, generation: string): PreviewOwnership {
+  return { ...identityValue, generation };
 }
 
-function expectedOwnership(state: LifecycleState, generation: string): ExpectedOwnership {
-  return { identity: state.identity, generation };
+function effectsFor(state: LifecycleState): LifecycleEffect[] {
+  const effects: LifecycleEffect[] = [];
+  if (state.active?.phase === 'launching') {
+    effects.push({
+      type: 'ensure-preview',
+      ownership: owned(state.identity, state.active.id),
+      generation: state.active,
+    });
+  }
+  for (const generation of [state.active, state.retiring]) {
+    if (generation?.phase === 'cleaning' && generation.cleanupReason !== null) {
+      effects.push({
+        type: 'cleanup-preview',
+        ownership: owned(state.identity, generation.id),
+        reason: generation.cleanupReason,
+      });
+    }
+  }
+  return effects;
 }
 
-function scheduleEffect(generation: string, now: string): LifecycleEffect {
-  return {
-    type: 'schedule-reconcile',
-    generation,
-    notBefore: isoAfter(now, RECONCILE_INTERVAL_MS),
-  };
-}
-
-function ensureEffect(state: LifecycleState): LifecycleEffect {
-  return {
-    type: 'ensure-generation',
-    generation: state.generation,
-    expectedOwnership: expectedOwnership(state, state.generation.id),
-  };
-}
-
-function inspectEffect(state: LifecycleState, generation: string): LifecycleEffect {
-  return {
-    type: 'inspect-generation',
-    generation,
-    expectedOwnership: expectedOwnership(state, generation),
-  };
-}
-
-function nextState(
-  state: LifecycleState,
-  commandId: string,
-  changes: Partial<LifecycleState>,
-): LifecycleState {
-  return {
-    ...state,
-    ...changes,
-    stateRevision: state.stateRevision + 1,
-    lastCommandId: commandId,
-  };
-}
-
-function accepted(
-  state: LifecycleState,
+function rejected(
+  state: LifecycleState | null,
   reason: string,
-  effects: LifecycleEffect[],
+  retryable = false,
 ): LifecycleTransition {
-  return { decision: 'accepted', reason, state, effects };
+  return { decision: 'rejected', reason, retryable, state, effects: [] };
 }
 
 function duplicate(state: LifecycleState, reason: string): LifecycleTransition {
-  return { decision: 'duplicate', reason, state, effects: [] };
+  return { decision: 'duplicate', reason, retryable: false, state, effects: effectsFor(state) };
 }
 
-function rejected(state: LifecycleState | null, reason: string): LifecycleTransition {
-  return { decision: 'rejected', reason, state, effects: [] };
+function advance(
+  state: LifecycleState,
+  command: LifecycleCommand,
+  change: Partial<LifecycleState>,
+): LifecycleState {
+  return {
+    ...state,
+    ...change,
+    stateRevision: state.stateRevision + 1,
+    lastEventSequence: command.eventSequence,
+    lastCommandId: command.commandId,
+  };
 }
 
-function verifyAuthority(
-  identity: PreviewIdentity,
-  claim: AdmissionClaim,
-  candidateSha: string | null,
-  requiredState: 'open' | 'closed' | null,
-  authority: GithubPullRequestAuthority | null,
-): string | null {
-  if (authority === null) {
-    return 'current-github-authority-required';
-  }
-  if (!identitiesEqual(identity, authority.identity)) {
-    return 'authority-identity-mismatch';
-  }
-  if (claim.pullRequestVersion !== authority.pullRequestVersion) {
-    return 'admission-is-not-current';
-  }
-  if (requiredState !== null && authority.state !== requiredState) {
-    return requiredState === 'open' ? 'pull-request-is-not-open' : 'pull-request-is-not-closed';
-  }
-  if (candidateSha !== null && candidateSha !== authority.headSha) {
-    return 'candidate-is-not-current-head';
-  }
-  return null;
-}
-
-function createGeneration(
-  identity: PreviewIdentity,
+function generation(
+  identityValue: PreviewIdentity,
   ordinal: number,
-  candidateSha: string,
-  controlSha: string,
+  revision: string,
   now: string,
 ): PreviewGeneration {
-  const stem = `r${identity.repositoryId}-pr${identity.pullRequestNumber}-g${ordinal}`;
   return {
-    id: stem,
+    id: `preview-${identityValue.repositoryId}-${String(identityValue.pullRequestNumber)}-${String(ordinal)}`,
     ordinal,
-    candidateSha,
-    controlSha,
+    revision,
     admittedAt: now,
-    startupDeadline: isoAfter(now, STARTUP_DURATION_MS),
+    startupDeadline: new Date(Date.parse(now) + STARTUP_DURATION_MS).toISOString(),
     healthyAt: null,
     expiresAt: null,
-    createToken: `create-${stem}`,
-    serviceName: `preview-${stem}`,
-    createObserved: false,
-    observedTaskId: null,
-    observedPublicIpv4: null,
-  };
-}
-
-function transitionBegin(
-  state: LifecycleState | null,
-  command: BeginCommand,
-  now: string,
-  authority: GithubPullRequestAuthority | null,
-): LifecycleTransition {
-  const authorityFailure = verifyAuthority(
-    command.identity,
-    command.admission,
-    command.candidateSha,
-    'open',
-    authority,
-  );
-  if (authorityFailure !== null) {
-    return rejected(state, authorityFailure);
-  }
-  if (state === null) {
-    if (command.expectedStateRevision !== null) {
-      return rejected(state, 'state-revision-mismatch');
-    }
-    const generation = createGeneration(
-      command.identity,
-      1,
-      command.candidateSha,
-      command.controlSha,
-      now,
-    );
-    const created: LifecycleState = {
-      protocolVersion: LIFECYCLE_PROTOCOL_VERSION,
-      identity: command.identity,
-      stateRevision: 1,
-      generationCounter: 1,
-      pullRequest: {
-        pullRequestVersion: command.admission.pullRequestVersion,
-        state: 'open',
-        headSha: command.candidateSha,
-      },
-      phase: 'launching',
-      generation,
-      retiringGeneration: null,
-      retiredGenerations: [],
-      cleanupDisposition: null,
-      cleanupConfirmedGenerations: [],
-      lastCommandId: command.commandId,
-    };
-    return accepted(created, 'generation-admitted', [ensureEffect(created)]);
-  }
-  if (state.lastCommandId === command.commandId) {
-    return duplicate(state, 'command-already-applied');
-  }
-  if (state.phase === 'closed') {
-    return rejected(state, 'reopen-required');
-  }
-  if (command.expectedStateRevision !== state.stateRevision) {
-    return rejected(state, 'state-revision-mismatch');
-  }
-  if (state.phase === 'cleaning' || state.phase === 'retiring') {
-    return rejected(state, 'lifecycle-transition-in-progress');
-  }
-  const ordinal = state.generationCounter + 1;
-  const generation = createGeneration(
-    command.identity,
-    ordinal,
-    command.candidateSha,
-    command.controlSha,
-    now,
-  );
-  const retiringGeneration = state.generation;
-  const admitted = nextState(state, command.commandId, {
-    generationCounter: ordinal,
-    pullRequest: {
-      pullRequestVersion: command.admission.pullRequestVersion,
-      state: 'open',
-      headSha: command.candidateSha,
-    },
-    phase: 'retiring',
-    generation,
-    retiringGeneration,
-    retiredGenerations: state.retiredGenerations,
-    cleanupDisposition: null,
-    cleanupConfirmedGenerations: state.cleanupConfirmedGenerations,
-  });
-  return accepted(admitted, 'generation-admitted', [
-    inspectEffect(admitted, retiringGeneration.id),
-  ]);
-}
-
-function transitionReopen(
-  state: LifecycleState | null,
-  command: ReopenCommand,
-  authority: GithubPullRequestAuthority | null,
-): LifecycleTransition {
-  const authorityFailure = verifyAuthority(
-    command.identity,
-    command.admission,
-    command.candidateSha,
-    'open',
-    authority,
-  );
-  if (authorityFailure !== null) {
-    return rejected(state, authorityFailure);
-  }
-  if (state === null) {
-    return rejected(state, 'closed-state-required');
-  }
-  if (state.lastCommandId === command.commandId) {
-    return duplicate(state, 'command-already-applied');
-  }
-  if (command.expectedStateRevision !== state.stateRevision) {
-    return rejected(state, 'state-revision-mismatch');
-  }
-  if (state.phase !== 'closed') {
-    return rejected(state, 'closed-state-required');
-  }
-  const reopened = nextState(state, command.commandId, {
-    pullRequest: {
-      pullRequestVersion: command.admission.pullRequestVersion,
-      state: 'open',
-      headSha: command.candidateSha,
-    },
-    phase: 'idle',
-    cleanupDisposition: null,
-    cleanupConfirmedGenerations: [],
-  });
-  return accepted(reopened, 'pull-request-reopened', [
-    inspectEffect(reopened, reopened.generation.id),
-    ...reopened.retiredGenerations.map((generation) => inspectEffect(reopened, generation.id)),
-  ]);
-}
-
-function transitionComplete(
-  state: LifecycleState | null,
-  command: CompleteCommand,
-  now: string,
-): LifecycleTransition {
-  if (state === null) {
-    return rejected(state, 'state-required');
-  }
-  if (command.generation !== state.generation.id) {
-    return rejected(state, 'generation-is-not-current');
-  }
-  if (state.phase === 'healthy') {
-    return duplicate(state, 'health-already-completed');
-  }
-  if (command.expectedStateRevision !== state.stateRevision) {
-    return rejected(state, 'state-revision-mismatch');
-  }
-  if (state.phase !== 'routing') {
-    return rejected(state, 'generation-is-not-routable');
-  }
-  if (Date.parse(now) > Date.parse(state.generation.startupDeadline)) {
-    return rejected(state, 'startup-deadline-exceeded');
-  }
-  const generation: PreviewGeneration = {
-    ...state.generation,
-    healthyAt: now,
-    expiresAt: isoAfter(now, EXPIRY_DURATION_MS),
-  };
-  const completed = nextState(state, command.commandId, { phase: 'healthy', generation });
-  return accepted(completed, 'health-completed', [scheduleEffect(generation.id, now)]);
-}
-
-function generationForReconcile(
-  state: LifecycleState,
-  generation: string,
-): PreviewGeneration | null {
-  if (generation === state.generation.id) {
-    return state.generation;
-  }
-  if (state.retiringGeneration?.id === generation) {
-    return state.retiringGeneration;
-  }
-  return state.retiredGenerations.find((retired) => retired.id === generation) ?? null;
-}
-
-function retiredGenerationForReconcile(
-  state: LifecycleState,
-  generation: string,
-): PreviewGeneration | null {
-  return state.retiredGenerations.find((retired) => retired.id === generation) ?? null;
-}
-
-function replaceRetiredGeneration(
-  state: LifecycleState,
-  generation: PreviewGeneration,
-): PreviewGeneration[] {
-  return state.retiredGenerations.map((retired) =>
-    retired.id === generation.id ? generation : retired,
-  );
-}
-
-function addRetiredGeneration(
-  state: LifecycleState,
-  generation: PreviewGeneration,
-): PreviewGeneration[] {
-  return state.retiredGenerations.some((retired) => retired.id === generation.id)
-    ? state.retiredGenerations
-    : [...state.retiredGenerations, generation];
-}
-
-function confirmedGenerations(state: LifecycleState, generation: string): string[] {
-  return state.cleanupConfirmedGenerations.includes(generation)
-    ? state.cleanupConfirmedGenerations
-    : [...state.cleanupConfirmedGenerations, generation];
-}
-
-function unconfirmedGenerations(state: LifecycleState, generation: string): string[] {
-  return state.cleanupConfirmedGenerations.filter((confirmed) => confirmed !== generation);
-}
-
-function compactRetiredGeneration(
-  retiredGenerations: PreviewGeneration[],
-  generation: PreviewGeneration,
-): PreviewGeneration[] {
-  // An initial absent inventory result cannot settle a delayed create. Once an owned
-  // observation has emitted cleanup, a later absent observation settles both intents.
-  return generation.createObserved
-    ? retiredGenerations.filter((retired) => retired.id !== generation.id)
-    : retiredGenerations;
-}
-
-function cleanupEffect(state: LifecycleState, generation: string): LifecycleEffect {
-  return {
-    type: 'cleanup-owned-generation',
-    generation,
-    expectedOwnership: expectedOwnership(state, generation),
-  };
-}
-
-function conflictEffects(
-  state: LifecycleState,
-  command: ReconcileCommand,
-  now: string,
-): LifecycleEffect[] {
-  if (command.observation.kind !== 'ownership-mismatch') {
-    return [];
-  }
-  return [
-    {
-      type: 'report-ownership-conflict',
-      generation: command.generation,
-      actualOwner: command.observation.actualOwner,
-      expectedOwnership: expectedOwnership(state, command.generation),
-    },
-    scheduleEffect(command.generation, now),
-  ];
-}
-
-function withObservedRuntime(
-  generation: PreviewGeneration,
-  observation: Extract<RuntimeObservation, { kind: 'owned' }>,
-): PreviewGeneration {
-  return {
-    ...generation,
-    createObserved: true,
-    observedTaskId: observation.taskId,
-    observedPublicIpv4: observation.publicIpv4,
-  };
-}
-
-function transitionRetiringReconcile(
-  state: LifecycleState,
-  command: ReconcileCommand,
-  now: string,
-): LifecycleTransition {
-  const retiring = state.retiringGeneration;
-  if (retiring === null || command.generation !== retiring.id) {
-    return rejected(state, 'generation-is-not-actionable');
-  }
-  if (command.observation.kind === 'ownership-mismatch') {
-    const updated = nextState(state, command.commandId, {});
-    return accepted(updated, 'ownership-conflict', conflictEffects(updated, command, now));
-  }
-  if (command.observation.kind === 'owned') {
-    const updated = nextState(state, command.commandId, {
-      retiringGeneration: withObservedRuntime(retiring, command.observation),
-    });
-    return accepted(updated, 'retiring-generation-present', [
-      cleanupEffect(updated, retiring.id),
-      scheduleEffect(retiring.id, now),
-    ]);
-  }
-  const retiredGenerations = addRetiredGeneration(state, retiring);
-  const launching = nextState(state, command.commandId, {
     phase: 'launching',
-    retiringGeneration: null,
-    retiredGenerations,
-    cleanupConfirmedGenerations: confirmedGenerations(state, retiring.id),
-  });
-  return accepted(launching, 'retiring-generation-absent', [ensureEffect(launching)]);
+    cleanupReason: null,
+  };
 }
 
-function transitionRetiredReconcile(
-  state: LifecycleState,
-  command: ReconcileCommand,
-  now: string,
-  retired: PreviewGeneration,
-): LifecycleTransition {
-  if (command.observation.kind === 'ownership-mismatch') {
-    const updated = nextState(state, command.commandId, {});
-    return accepted(updated, 'ownership-conflict', conflictEffects(updated, command, now));
-  }
-  if (command.observation.kind === 'owned') {
-    const observed = withObservedRuntime(retired, command.observation);
-    const updated = nextState(state, command.commandId, {
-      retiredGenerations: replaceRetiredGeneration(state, observed),
-      cleanupConfirmedGenerations: unconfirmedGenerations(state, command.generation),
-    });
-    return accepted(updated, 'retired-generation-requires-cleanup', [
-      cleanupEffect(updated, command.generation),
-      scheduleEffect(command.generation, now),
-    ]);
-  }
-  const retained = compactRetiredGeneration(state.retiredGenerations, retired);
-  const updated = nextState(state, command.commandId, {
-    retiredGenerations: retained,
-    cleanupConfirmedGenerations: retired.createObserved
-      ? unconfirmedGenerations(state, command.generation)
-      : confirmedGenerations(state, command.generation),
-  });
-  return accepted(
-    updated,
-    retired.createObserved ? 'retired-generation-cleanup-confirmed' : 'retired-create-unresolved',
-    retired.createObserved ? [] : [scheduleEffect(command.generation, now)],
-  );
+function cleaning(value: PreviewGeneration, reason: CleanupReason): PreviewGeneration {
+  return { ...value, phase: 'cleaning', cleanupReason: reason };
 }
 
-function transitionCleaningReconcile(
-  state: LifecycleState,
-  command: ReconcileCommand,
-  now: string,
-): LifecycleTransition {
-  if (command.observation.kind === 'ownership-mismatch') {
-    const updated = nextState(state, command.commandId, {});
-    return accepted(updated, 'ownership-conflict', conflictEffects(updated, command, now));
-  }
-  if (command.observation.kind === 'owned') {
-    const retired = retiredGenerationForReconcile(state, command.generation);
-    const updated = nextState(state, command.commandId, {
-      cleanupConfirmedGenerations: unconfirmedGenerations(state, command.generation),
-      retiredGenerations:
-        retired === null
-          ? state.retiredGenerations
-          : replaceRetiredGeneration(state, withObservedRuntime(retired, command.observation)),
-    });
-    return accepted(updated, 'owned-generation-requires-cleanup', [
-      cleanupEffect(updated, command.generation),
-      scheduleEffect(command.generation, now),
-    ]);
-  }
-  const retired = retiredGenerationForReconcile(state, command.generation);
-  const retiredGenerations =
-    retired === null
-      ? state.retiredGenerations
-      : compactRetiredGeneration(state.retiredGenerations, retired);
-  const cleanupConfirmedGenerations = retired?.createObserved
-    ? unconfirmedGenerations(state, command.generation)
-    : confirmedGenerations(state, command.generation);
-  const required = [state.generation.id];
-  if (state.retiringGeneration !== null) {
-    required.push(state.retiringGeneration.id);
-  }
-  required.push(...retiredGenerations.map((generation) => generation.id));
-  const cleanupComplete = required.every((generation) =>
-    cleanupConfirmedGenerations.includes(generation),
-  );
-  if (!cleanupComplete) {
-    const updated = nextState(state, command.commandId, {
-      cleanupConfirmedGenerations,
-      retiredGenerations,
-    });
-    const unconfirmed = required.find(
-      (generation) => !cleanupConfirmedGenerations.includes(generation),
-    );
-    if (unconfirmed === undefined) {
-      return accepted(updated, 'cleanup-observation-recorded', []);
-    }
-    return accepted(updated, 'cleanup-observation-recorded', [inspectEffect(updated, unconfirmed)]);
-  }
-  const phase = state.cleanupDisposition === 'closed' ? 'closed' : 'idle';
-  const completed = nextState(state, command.commandId, {
-    phase,
-    retiringGeneration: null,
-    retiredGenerations,
-    cleanupConfirmedGenerations,
-  });
-  return accepted(completed, 'cleanup-completed', []);
-}
-
-function transitionTerminalReconcile(
-  state: LifecycleState,
-  command: ReconcileCommand,
-  now: string,
-): LifecycleTransition {
-  const retired = retiredGenerationForReconcile(state, command.generation);
-  if (command.generation !== state.generation.id && retired === null) {
-    return rejected(state, 'generation-is-not-actionable');
-  }
-  if (command.observation.kind === 'ownership-mismatch') {
-    const updated = nextState(state, command.commandId, {});
-    return accepted(updated, 'ownership-conflict', conflictEffects(updated, command, now));
-  }
-  if (command.observation.kind === 'owned') {
-    const updated = nextState(state, command.commandId, {
-      cleanupConfirmedGenerations: unconfirmedGenerations(state, command.generation),
-      retiredGenerations:
-        retired === null
-          ? state.retiredGenerations
-          : replaceRetiredGeneration(state, withObservedRuntime(retired, command.observation)),
-    });
-    return accepted(updated, 'orphaned-owned-generation', [
-      cleanupEffect(updated, command.generation),
-      scheduleEffect(command.generation, now),
-    ]);
-  }
-  if (retired !== null) {
-    const updated = nextState(state, command.commandId, {
-      retiredGenerations: compactRetiredGeneration(state.retiredGenerations, retired),
-      cleanupConfirmedGenerations: retired.createObserved
-        ? unconfirmedGenerations(state, command.generation)
-        : confirmedGenerations(state, command.generation),
-    });
-    return accepted(
-      updated,
-      retired.createObserved ? 'retired-generation-cleanup-confirmed' : 'retired-create-unresolved',
-      retired.createObserved ? [] : [scheduleEffect(command.generation, now)],
-    );
-  }
-  return duplicate(state, 'generation-remains-absent');
-}
-
-function transitionCurrentReconcile(
-  state: LifecycleState,
-  command: ReconcileCommand,
-  now: string,
-): LifecycleTransition {
-  if (command.observation.kind === 'ownership-mismatch') {
-    const updated = nextState(state, command.commandId, {});
-    return accepted(updated, 'ownership-conflict', conflictEffects(updated, command, now));
-  }
-  if (command.observation.kind === 'absent') {
-    const updated = nextState(state, command.commandId, {
-      phase: state.phase === 'routing' ? 'launching' : state.phase,
-      generation: {
-        ...state.generation,
-        observedTaskId: null,
-        observedPublicIpv4: null,
-      },
-    });
-    return accepted(updated, 'generation-absent', [
-      ensureEffect(updated),
-      scheduleEffect(command.generation, now),
-    ]);
-  }
-  const generation = withObservedRuntime(state.generation, command.observation);
-  if (
-    command.observation.runtime !== 'running' ||
-    command.observation.taskId === null ||
-    command.observation.publicIpv4 === null
-  ) {
-    const updated = nextState(state, command.commandId, { generation });
-    return accepted(updated, 'generation-not-yet-running', [
-      scheduleEffect(command.generation, now),
-    ]);
-  }
-  const nextPhase = state.phase === 'healthy' ? 'healthy' : 'routing';
-  const updated = nextState(state, command.commandId, { phase: nextPhase, generation });
-  if (command.observation.routing !== 'matches') {
-    return accepted(updated, 'routing-requires-sync', [
-      {
-        type: 'sync-owned-routing',
-        generation: command.generation,
-        taskId: command.observation.taskId,
-        publicIpv4: command.observation.publicIpv4,
-        expectedOwnership: expectedOwnership(updated, command.generation),
-      },
-      scheduleEffect(command.generation, now),
-    ]);
-  }
-  return accepted(updated, 'owned-routing-current', [scheduleEffect(command.generation, now)]);
-}
-
-function transitionReconcile(
-  state: LifecycleState | null,
-  command: ReconcileCommand,
-  now: string,
-): LifecycleTransition {
-  if (state === null) {
-    return rejected(state, 'state-required');
-  }
-  if (generationForReconcile(state, command.generation) === null) {
-    return rejected(state, 'generation-is-not-known');
-  }
-  if (state.lastCommandId === command.commandId) {
-    return duplicate(state, 'command-already-applied');
-  }
-  if (command.expectedStateRevision !== state.stateRevision) {
-    return rejected(state, 'state-revision-mismatch');
-  }
-  if (state.phase === 'cleaning') {
-    return transitionCleaningReconcile(state, command, now);
-  }
-  if (state.phase === 'closed' || state.phase === 'idle') {
-    return transitionTerminalReconcile(state, command, now);
-  }
-  const retired = retiredGenerationForReconcile(state, command.generation);
-  if (retired !== null) {
-    return transitionRetiredReconcile(state, command, now, retired);
-  }
-  if (state.phase === 'retiring') {
-    return transitionRetiringReconcile(state, command, now);
-  }
-  if (command.generation !== state.generation.id) {
-    return rejected(state, 'generation-is-not-actionable');
-  }
-  return transitionCurrentReconcile(state, command, now);
-}
-
-function destroyRequiresAuthority(reason: DestroyReason): boolean {
-  return (
-    reason === 'pull-request-closed' ||
-    reason === 'pull-request-merged' ||
-    reason === 'runner-cancelled' ||
-    reason === 'owner-requested'
-  );
-}
-
-function transitionDestroy(
-  state: LifecycleState | null,
-  command: DestroyCommand,
-  now: string,
-  authority: GithubPullRequestAuthority | null,
-): LifecycleTransition {
-  if (state === null) {
-    return rejected(state, 'state-required');
-  }
-  if (command.generation !== state.generation.id) {
-    return rejected(state, 'generation-is-not-current');
-  }
-  if (command.reason === 'runner-cancelled' && state.phase === 'healthy') {
-    return rejected(state, 'completed-generation');
-  }
-  if (state.lastCommandId === command.commandId) {
-    return duplicate(state, 'command-already-applied');
-  }
-  if (command.expectedStateRevision !== state.stateRevision) {
-    return rejected(state, 'state-revision-mismatch');
-  }
-  if (destroyRequiresAuthority(command.reason)) {
-    if (command.admission === null) {
-      return rejected(state, 'current-github-authority-required');
-    }
-    const requiredState =
-      command.reason === 'pull-request-closed' || command.reason === 'pull-request-merged'
-        ? 'closed'
-        : 'open';
-    const authorityFailure = verifyAuthority(
-      command.identity,
-      command.admission,
-      null,
-      requiredState,
-      authority,
-    );
-    if (authorityFailure !== null) {
-      return rejected(state, authorityFailure);
-    }
-  } else if (command.admission !== null) {
-    return rejected(state, 'admission-not-allowed-for-clock-destroy');
-  }
-  if (command.reason === 'startup-timeout') {
-    if (state.phase === 'healthy') {
-      return rejected(state, 'generation-already-completed');
-    }
-    if (Date.parse(now) < Date.parse(state.generation.startupDeadline)) {
-      return rejected(state, 'startup-deadline-not-reached');
-    }
-  }
-  if (command.reason === 'expired') {
-    if (
-      state.phase !== 'healthy' ||
-      state.generation.expiresAt === null ||
-      Date.parse(now) < Date.parse(state.generation.expiresAt)
-    ) {
-      return rejected(state, 'expiry-not-reached');
-    }
-  }
-  const closesPullRequest =
-    command.reason === 'pull-request-closed' || command.reason === 'pull-request-merged';
-  const pullRequest =
-    closesPullRequest && authority !== null
-      ? {
-          pullRequestVersion: authority.pullRequestVersion,
-          state: 'closed' as const,
-          headSha: authority.headSha,
-        }
-      : state.pullRequest;
-  const cleanup = nextState(state, command.commandId, {
-    pullRequest,
-    phase: 'cleaning',
-    cleanupDisposition: closesPullRequest ? 'closed' : 'idle',
-    cleanupConfirmedGenerations: state.cleanupConfirmedGenerations.filter((generation) =>
-      state.retiredGenerations.some((retired) => retired.id === generation),
-    ),
-  });
-  const generations = [cleanup.generation.id];
-  if (cleanup.retiringGeneration !== null) {
-    generations.push(cleanup.retiringGeneration.id);
-  }
-  generations.push(...cleanup.retiredGenerations.map((generation) => generation.id));
-  return accepted(
-    cleanup,
-    'cleanup-requested',
-    generations.map((generation) => inspectEffect(cleanup, generation)),
-  );
-}
-
-function transitionStatus(
-  state: LifecycleState | null,
-  command: StatusCommand,
-): LifecycleTransition {
-  if (state !== null && !identitiesEqual(state.identity, command.identity)) {
-    return rejected(state, 'state-identity-mismatch');
-  }
-  return { decision: 'accepted', reason: 'status-read', state, effects: [] };
+function accepted(state: LifecycleState): LifecycleTransition {
+  return {
+    decision: 'accepted',
+    reason: 'accepted',
+    retryable: false,
+    state,
+    effects: effectsFor(state),
+  };
 }
 
 export function transitionLifecycle(input: LifecycleTransitionInput): LifecycleTransition {
   const command = lifecycleCommandSchema.parse(input.command);
+  const now = timestamp(input.now, 'now');
   const state = input.state === null ? null : lifecycleStateSchema.parse(input.state);
-  const authority =
-    input.currentAuthority === null
-      ? null
-      : githubPullRequestAuthoritySchema.parse(input.currentAuthority);
-  requireIsoDateTime(input.now, 'now');
-  if (state !== null && !identitiesEqual(state.identity, command.identity)) {
-    return rejected(state, 'state-identity-mismatch');
+  if (state === null) {
+    if (command.type !== 'admit') return rejected(null, 'preview-does-not-exist');
+    if (command.expectedStateRevision !== null) return rejected(null, 'state-revision-mismatch');
+    const active = generation(command.identity, 1, command.revision, now);
+    return accepted({
+      protocolVersion: LIFECYCLE_PROTOCOL_VERSION,
+      identity: command.identity,
+      stateRevision: 1,
+      generationCounter: 1,
+      lastEventSequence: command.eventSequence,
+      lastCommandId: command.commandId,
+      closed: false,
+      active,
+      retiring: null,
+    });
   }
-  switch (command.type) {
-    case 'begin':
-      return transitionBegin(state, command, input.now, authority);
-    case 'reopen':
-      return transitionReopen(state, command, authority);
-    case 'complete':
-      return transitionComplete(state, command, input.now);
-    case 'reconcile':
-      return transitionReconcile(state, command, input.now);
-    case 'destroy':
-      return transitionDestroy(state, command, input.now, authority);
-    case 'status':
-      return transitionStatus(state, command);
+  if (!sameIdentity(state.identity, command.identity)) return rejected(state, 'identity-mismatch');
+  if (command.commandId === state.lastCommandId) return duplicate(state, 'duplicate-command');
+  if (command.expectedStateRevision !== state.stateRevision)
+    return rejected(state, 'state-revision-mismatch');
+  if (command.eventSequence <= state.lastEventSequence)
+    return rejected(state, 'event-is-not-newer');
+
+  if (command.type === 'admit') {
+    if (state.closed) return rejected(state, 'preview-is-closed');
+    if (state.active === null) return rejected(state, 'preview-does-not-exist');
+    if (state.active.revision === command.revision)
+      return duplicate(state, 'revision-already-admitted');
+    if (state.retiring !== null) return rejected(state, 'retiring-cleanup-pending', true);
+    if (state.active.phase === 'cleaning') return rejected(state, 'active-cleanup-pending', true);
+    const active = generation(state.identity, state.generationCounter + 1, command.revision, now);
+    return accepted(
+      advance(state, command, {
+        generationCounter: active.ordinal,
+        active,
+        retiring: cleaning(state.active, 'replaced'),
+      }),
+    );
   }
+  if (command.type === 'healthy') {
+    if (state.active?.id !== command.generation) return rejected(state, 'generation-is-not-active');
+    if (state.active.phase === 'healthy') return duplicate(state, 'generation-is-already-healthy');
+    if (state.active.phase === 'cleaning') return rejected(state, 'generation-is-cleaning');
+    if (Date.parse(now) > Date.parse(state.active.startupDeadline))
+      return rejected(state, 'startup-deadline-elapsed');
+    const active = {
+      ...state.active,
+      phase: 'healthy' as const,
+      healthyAt: now,
+      expiresAt: new Date(Date.parse(now) + EXPIRY_DURATION_MS).toISOString(),
+    };
+    return accepted(advance(state, command, { active }));
+  }
+  if (command.type === 'deadline') {
+    if (state.active?.id !== command.generation) return rejected(state, 'generation-is-not-active');
+    if (state.active.phase === 'cleaning') return duplicate(state, 'cleanup-already-scheduled');
+    const deadline =
+      command.deadline === 'startup' ? state.active.startupDeadline : state.active.expiresAt;
+    const expectedPhase = command.deadline === 'startup' ? 'launching' : 'healthy';
+    if (
+      state.active.phase !== expectedPhase ||
+      deadline === null ||
+      Date.parse(now) < Date.parse(deadline)
+    )
+      return rejected(state, 'deadline-not-reached');
+    return accepted(
+      advance(state, command, {
+        active: cleaning(
+          state.active,
+          command.deadline === 'startup' ? 'startup-timeout' : 'expired',
+        ),
+      }),
+    );
+  }
+  if (command.type === 'close') {
+    const active =
+      state.active === null || state.active.phase === 'cleaning'
+        ? state.active
+        : cleaning(state.active, 'closed');
+    return accepted(advance(state, command, { closed: true, active }));
+  }
+  if (command.type === 'cleanup-complete') {
+    if (state.active?.id === command.generation) {
+      if (state.active.phase !== 'cleaning') return rejected(state, 'cleanup-not-requested');
+      return accepted(advance(state, command, { active: null }));
+    }
+    if (state.retiring?.id === command.generation)
+      return accepted(advance(state, command, { retiring: null }));
+    return rejected(state, 'generation-is-not-tracked');
+  }
+  return accepted(advance(state, command, {}));
 }

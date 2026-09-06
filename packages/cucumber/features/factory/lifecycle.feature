@@ -1,53 +1,51 @@
-Feature: Ordered preview lifecycle
-  The factory keeps one disposable preview aligned with the current trusted pull request admission.
+Feature: Bounded preview lifecycle
+  The factory keeps one preview for the exact admitted pull request revision and cleans it up safely.
 
   @id:factory.lifecycle.current-admission @backend-noop @frontend-noop @browser-noop-eligible
-  Scenario: Admit only the current pull request revision
-    backend-noop: Admission is performed by trusted factory workflow and lifecycle adapters outside the generated application backend.
-    frontend-noop: Admission has no generated application frontend interaction.
-    browser-noop: The GitHub admission token and DynamoDB conditional write are not observable through the public preview page.
-    Given a trusted workflow validated a pull request candidate and control revision
-    When the lifecycle worker admits that exact current GitHub pull request snapshot
-    Then it records a new generation with a 30 minute startup deadline before requesting runtime launch
-    And a delayed admission for an older snapshot cannot replace it
+  Scenario: Admit the exact current pull request revision
+    backend-noop: Preview admission is factory runtime behavior outside the generated application backend.
+    frontend-noop: Preview admission has no generated application frontend interaction.
+    browser-noop: Reducer state and idempotent start work are not observable through the public preview page.
+    Given a trusted factory event for the current repository pull request revision
+    When the lifecycle admits that revision
+    Then it creates one deterministic generation with immutable repository pull request and generation ownership
+    And it emits idempotent start work for that generation
 
-  @id:factory.lifecycle.close-reopen-fence @backend-noop @frontend-noop @browser-noop-eligible
-  Scenario: Fence delayed work across close and reopen
-    backend-noop: Pull request close and reopen fences are factory infrastructure state outside the generated application backend.
-    frontend-noop: Pull request close and reopen fences have no generated application frontend interaction.
-    browser-noop: Reordered workflow commands and tombstone versions are not observable through the public preview page.
-    Given a preview has an admitted generation
-    When the pull request closes and later reopens with a newer GitHub snapshot
-    Then old validation and old reopen commands remain fenced
-    And only a begin command admitted against the current open snapshot can create the next generation
-
-  @id:factory.lifecycle.create-recovery @backend-noop @frontend-noop @browser-noop-eligible
-  Scenario: Reconcile an uncertain runtime create
-    backend-noop: Runtime creation and reconciliation are factory infrastructure operations outside the generated application backend.
-    frontend-noop: Runtime creation and reconciliation have no generated application frontend interaction.
-    browser-noop: An uncertain ECS create response cannot be distinguished from its reconciled result through the public preview page.
-    Given the generation intent and deterministic runtime identity were recorded before launch
-    When the create response is lost, later redeploys supersede it, or a close arrives while creation is in flight
-    Then reconciliation finds or recreates the same owned generation idempotently
-    And cleanup removes any late owned runtime without reviving or deleting the current preview
-    And the cleanup identity survives close and reopen until settled runtime intents are confirmed
+  @id:factory.lifecycle.replace-revision @backend-noop @frontend-noop @browser-noop-eligible
+  Scenario: Replace a preview only while bounded cleanup is available
+    backend-noop: Revision replacement and cleanup scheduling are factory runtime behavior outside the generated application backend.
+    frontend-noop: Revision replacement has no generated application frontend interaction.
+    browser-noop: Retiring-generation state is not observable through the public preview page.
+    Given an admitted preview for an older revision
+    When a newer ordered revision is admitted
+    Then it becomes the active generation and schedules ownership-checked cleanup of the old generation
+    And another revision is retryably rejected until that retiring cleanup completes
 
   @id:factory.lifecycle.fixed-expiry @backend-noop @frontend-noop @browser-noop-eligible
-  Scenario: Start one fixed expiry after successful health
-    backend-noop: Preview deadline accounting is factory infrastructure state outside the generated application backend.
+  Scenario: Record one fixed expiry after timely health
+    backend-noop: Preview deadline accounting is factory runtime behavior outside the generated application backend.
     frontend-noop: Preview deadline accounting has no generated application frontend interaction.
-    browser-noop: Fixed expiry timestamps and duplicate completion commands are not observable through the public preview page.
-    Given an admitted generation becomes publicly healthy within its startup deadline
-    When health completion is duplicated or ECS replaces its task
-    Then the first successful health records one four hour expiry
-    And duplicate completion and task replacement do not extend it
+    browser-noop: Health and expiry timestamps are not observable through the public preview page.
+    Given the active generation reports its first successful health before startup deadline
+    When duplicate health reports arrive
+    Then the first health records one four hour expiry without extension
+    And startup timeout or expiry schedules ownership-checked cleanup when due
 
   @id:factory.lifecycle.owned-cleanup @backend-noop @frontend-noop @browser-noop-eligible
-  Scenario: Clean only resources owned by the admitted preview
-    backend-noop: Cloud resource ownership checks and cleanup are factory infrastructure operations outside the generated application backend.
-    frontend-noop: Cloud resource ownership checks and cleanup have no generated application frontend interaction.
-    browser-noop: AWS ownership tags and DNS ownership markers are not observable through the public preview page.
-    Given cleanup is requested for the current generation
-    When reconciliation inspects runtime tags and the DNS ownership marker
-    Then destructive effects are emitted only for matching repository pull request and generation ownership
-    And the permanent sweeper continues reconciling incomplete cleanup and orphaned owned resources
+  Scenario: Keep cleanup completion bound to its generation
+    backend-noop: Cleanup work and completion are factory runtime behavior outside the generated application backend.
+    frontend-noop: Cleanup work has no generated application frontend interaction.
+    browser-noop: Generation ownership and cleanup completion are not observable through the public preview page.
+    Given an active or retiring generation needs cleanup after close timeout expiry or replacement
+    When a completion or delayed event names a generation
+    Then only the tracked matching generation can change bounded lifecycle state
+    And stale state revisions out-of-order events and duplicate commands cannot revive a preview
+
+  @id:factory.lifecycle.reconcile @backend-noop @frontend-noop @browser-noop-eligible
+  Scenario: Re-emit required idempotent work
+    backend-noop: Reconciliation is factory runtime behavior outside the generated application backend.
+    frontend-noop: Reconciliation has no generated application frontend interaction.
+    browser-noop: Adapter retries are not observable through the public preview page.
+    Given an active start or tracked cleanup remains required
+    When reconciliation is requested with the current ordered state
+    Then it re-emits only the currently required idempotent start or cleanup work

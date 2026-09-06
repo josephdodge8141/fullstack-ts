@@ -74,7 +74,7 @@ test('factory normalization uses factoryApplicable and represents other catalog 
 
 test('factory omission, duplication, extra cases, and non-passing status are rejected', async () => {
   const missing = await runCucumberMessages({
-    'factory/sample.feature': factorySource.replace(/\n  @id:factory\.two[\s\S]*$/, '\n'),
+    'factory/sample.feature': factorySource.replace(/\n {2}@id:factory\.two[\s\S]*$/, '\n'),
   });
   const valid = await runCucumberMessages({ 'factory/sample.feature': factorySource });
   const extra = await runCucumberMessages({
