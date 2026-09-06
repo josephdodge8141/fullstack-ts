@@ -83,6 +83,7 @@ function knownDirectoryError(file: string): string[] {
       'models',
       'routes',
       'services',
+      'steps',
     ]);
   if (parts[0] === 'frontend')
     return knownChild(file, parts, ROOT_SOURCE_FILES.frontend, [
@@ -93,6 +94,7 @@ function knownDirectoryError(file: string): string[] {
       'hooks',
       'pages',
       'services',
+      'steps',
       'utils',
     ]);
   if (parts[0] === 'infra') return knownChild(file, parts, ROOT_SOURCE_FILES.infra, ['runtime']);
@@ -156,7 +158,7 @@ function importSpecifiers(text: string): readonly string[] {
 }
 
 function isTest(file: string): boolean {
-  return /\.test\.[cm]?[jt]sx?$/.test(file);
+  return /\.(?:test|steps)\.[cm]?[jt]sx?$/.test(file);
 }
 
 async function projectCoverageErrors(root: string, files: readonly string[]): Promise<string[]> {

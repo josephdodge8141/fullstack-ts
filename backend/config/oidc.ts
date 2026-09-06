@@ -44,9 +44,15 @@ export class OidcCallbackError extends Error {
 export function createOidcConnection(options: OidcConnectionOptions): AuthConnection {
   let configuration: Promise<Configuration> | undefined;
   const getConfiguration = (): Promise<Configuration> => {
-    configuration ??= discovery(new URL(options.issuer), options.clientId, undefined, None(), {
-      execute: [allowInsecureRequests],
-    });
+    if (configuration === undefined) {
+      const pending = discovery(new URL(options.issuer), options.clientId, undefined, None(), {
+        execute: [allowInsecureRequests],
+      });
+      configuration = pending;
+      void pending.catch(() => {
+        if (configuration === pending) configuration = undefined;
+      });
+    }
     return configuration;
   };
 
@@ -67,6 +73,7 @@ export function createOidcConnection(options: OidcConnectionOptions): AuthConnec
         nonce: transaction.nonce,
         code_challenge: await calculatePKCECodeChallenge(transaction.codeVerifier),
         code_challenge_method: 'S256',
+        prompt: 'login',
       });
       return { redirectUrl: redirectUrl.href, transaction };
     },

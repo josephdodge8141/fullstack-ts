@@ -9,6 +9,7 @@
     "test:unit": "node --import tsx --test services/*.test.ts",
     "test:browser": "npm --prefix .. run build:contracts && npm --prefix .. run build -w @app/backend && npm run build && playwright test",
     "test:browser:compose": "playwright test --config playwright.compose.config.ts",
+    "test:behaviors:compose": "tsx ../packages/cucumber/catalog/run-layer.ts frontend steps/application.steps.ts",
     "preview:test": "vite preview"
   },
   "dependencies": {

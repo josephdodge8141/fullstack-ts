@@ -9,6 +9,23 @@
   "verifyEmail": false,
   "resetPasswordAllowed": true,
   "passwordPolicy": "length(12)",
+  "users": [
+    {
+      "username": "test-user@example.test",
+      "email": "test-user@example.test",
+      "firstName": "Test",
+      "lastName": "User",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "a-long-cucumber-test-password",
+          "temporary": false
+        }
+      ]
+    }
+  ],
   "clients": [
     {
       "clientId": "local-web",
