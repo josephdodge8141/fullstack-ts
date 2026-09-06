@@ -49,6 +49,20 @@ test('rejects incomplete TypeScript project coverage', async () => {
   ]);
 });
 
+test('rejects permanent infrastructure imports from dynamic preview runtime source', async () => {
+  const root = await fixture({
+    'infra/runtime/cdk.ts': "import { Stack } from 'aws-cdk-lib';\nexport { Stack };\n",
+    'infra/runtime/cloudformation.ts':
+      "import { CloudFormationClient } from '@aws-sdk/client-cloudformation';\nexport { CloudFormationClient };\n",
+    'infra/runtime/foundation.ts': "import '../foundation/stack.js';\nexport {};\n",
+  });
+  assert.deepEqual(await checkSourcePolicy(root), [
+    'infra/runtime/cdk.ts imports permanent infrastructure capability: aws-cdk-lib',
+    'infra/runtime/cloudformation.ts imports permanent infrastructure capability: @aws-sdk/client-cloudformation',
+    'infra/runtime/foundation.ts imports permanent infrastructure capability: ../foundation/stack.js',
+  ]);
+});
+
 async function fixture(files: Readonly<Record<string, string>> = {}): Promise<string> {
   const root = await mkdtemp(path.join(tmpdir(), 'source-policy-'));
   const baseline: Record<string, string> = {

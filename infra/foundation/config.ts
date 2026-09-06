@@ -14,6 +14,25 @@ export const foundationConfigSchema = z
 
 export type FoundationConfig = z.infer<typeof foundationConfigSchema>;
 
+export const foundationOutputsSchema = z
+  .object({
+    BackendRepositoryUri: z.string().min(1),
+    ClusterArn: z.string().min(1),
+    FrontendRepositoryUri: z.string().min(1),
+    LogGroupName: z.string().min(1),
+    PreviewAdapterPolicyArn: z.string().min(1),
+    PreviewZoneId: z.string().min(1),
+    PreviewZoneName: z.string().min(1),
+    PublicSubnetIds: z.string().min(1),
+    StateTableName: z.string().min(1),
+    TaskExecutionRoleArn: z.string().min(1),
+    TaskSecurityGroupId: z.string().min(1),
+    VpcId: z.string().min(1),
+  })
+  .strict();
+
+export type FoundationOutputs = z.infer<typeof foundationOutputsSchema>;
+
 export const exampleFoundationConfig: FoundationConfig = {
   applicationName: 'example-app',
   previewZoneId: 'Z0123456789EXAMPLE',
