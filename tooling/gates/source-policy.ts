@@ -3,7 +3,14 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const SOURCE_EXTENSIONS = new Set(['.ts', '.tsx', '.js', '.mjs', '.cjs']);
-const SKIPPED_DIRECTORIES = new Set(['.agents', '.claude', '.git', 'dist', 'node_modules']);
+const SKIPPED_DIRECTORIES = new Set([
+  '.agents',
+  '.claude',
+  '.git',
+  'artifacts',
+  'dist',
+  'node_modules',
+]);
 const BACKEND_LAYERS: Readonly<Record<string, number>> = {
   config: 0,
   models: 0,
@@ -103,7 +110,7 @@ function knownDirectoryError(file: string): string[] {
     return knownChild(file, parts.slice(1), ROOT_SOURCE_FILES['packages/zod'], ['schemas']);
   if (parts[0] === 'packages' && parts[1] === 'cucumber')
     return knownChild(file, parts.slice(1), ROOT_SOURCE_FILES['packages/cucumber'], ['catalog']);
-  if (parts[0] === 'tooling' && parts[1] === 'gates') return [];
+  if (parts[0] === 'tooling' && (parts[1] === 'gates' || parts[1] === 'factory')) return [];
   return [`${file} is outside a known source directory`];
 }
 

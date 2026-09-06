@@ -1,6 +1,6 @@
 # fullstack-ts
 
-Opinionated TypeScript starter: React, Node, shared Zod contracts, Cucumber behavior-first development, a bounded preview lifecycle reducer, and a minimal permanent AWS foundation.
+Opinionated public TypeScript factory: React, Node, shared Zod contracts, Cucumber behavior-first development, a bounded preview lifecycle reducer, and a minimal permanent AWS foundation.
 
 Wave 2 adds a credential-free local slice: Caddy, Keycloak backed by Postgres, backend OIDC/session handling, and frontend signup, login, and logout. Public Hello World and `/api/v1/health` remain available without a session.
 
@@ -9,3 +9,11 @@ Run `docker compose up --build`, then open [http://app.localhost:8088](http://ap
 The imported non-MFA test identity is `test-user@example.test` with password `a-long-cucumber-test-password`.
 
 `npm run synth:foundation` synthesizes the generic permanent CDK foundation without credentials or AWS lookups. It does not deploy. The owned resources and strict boundary for a future dynamic preview adapter are documented in `docs/aws-preview-adapter.md`.
+
+Factory commands:
+
+- `npm run package:factory` exports sorted tracked source into `artifacts/factory`.
+- `npm run proof:clean-clone` exports a fresh clone, runs `npm ci`, and runs the root `check`.
+- `npm run proof:docker` runs the clean-clone proof plus Compose, health, frontend behavior, and Playwright checks. Docker is required for this explicit proof.
+
+The export excludes Git metadata, dependencies, build output, and local environment files. Packaging also rejects common private-key, AWS access-key, and absolute home-directory signatures; public review remains responsible for other sensitive content. Cloud enrollment, GitHub setup, AWS deployment, browser-agent CI, and production remain outside this version.

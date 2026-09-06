@@ -1,6 +1,8 @@
 # Initialization
 
-A generated repository starts locally with `docker compose up`; no `.env` copy or cloud credentials are required for the public Hello World and health route.
+A generated repository starts locally with `docker compose up --build`; no `.env` copy or cloud credentials are required for the public Hello World and health route. Open `http://app.localhost:8088` and request `/api/v1/health` through the same origin.
+
+For a shipped-factory proof, run `npm ci`, then `npm run check` and `npm run proof:clean-clone`. The latter exports only sorted Git-tracked files to a temporary clean clone, installs from the lockfile, and runs the root checks. Run `npm run proof:docker` when Docker is available to add Compose, real Keycloak-backed authentication behavior, and real-stack Playwright coverage.
 
 Cloud preview initialization will be a separate, explicit operation. The current repository can validate and synthesize the generic permanent foundation with `npm run synth:foundation`; it does not deploy, inspect an AWS account, delegate DNS, enroll GitHub, configure OIDC, verify a Bedrock model or prove a live preview.
 
@@ -8,4 +10,4 @@ The initialization adapter must eventually validate repository and account confi
 
 The public template contains generic `.env.example` values. Account IDs, hosted-zone IDs, repository settings and synthetic preview credentials belong in repository variables, environments or secrets. Rerunning initialization must inspect and reuse compatible resources rather than create duplicates.
 
-Use `.claude/skills/initialize/SKILL.md` when it exists in a generated repository. It records the exact commands and required evidence for the shipped version.
+Use `.claude/skills/initialize/SKILL.md` when it exists in a generated repository. It records the exact local commands and evidence for this shipped version. It does not enroll GitHub, create AWS resources, configure DNS or deploy production.

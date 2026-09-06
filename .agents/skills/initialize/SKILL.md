@@ -13,11 +13,13 @@ Read root CLAUDE.md or AGENTS.md, README.md, package.json, docker-compose.yaml, 
 
 Determine whether the user wants local onboarding, application identity configuration, cloud preview enrollment, or the whole initialization. A local-only request does not authorize DNS, IAM, repository-setting, or deployment changes. Existing authorization for the selected setup remains valid; do not ask for repetitive confirmation.
 
-For the factory's own acceptance run, first finish the complete template wiring with generic fixture/example values, then generate the separate Hello World reference repository and populate its actual configuration there. Do not turn this sequence into a local-only template or report stubbed cloud/model results as a successful full deployment. A generated consumer should use shipped commands without undocumented manual repairs.
+For this factory's acceptance run, stop after the shipped clean-clone and Docker proofs. Creating a separate reference repository or configuring cloud/model infrastructure belongs to a later, explicitly authorized phase. A generated consumer should use shipped commands without undocumented manual repairs.
 
 Identify actual npm scripts and deployment commands from the repository. Do not invent script names or claim capabilities that this generated version does not contain. If expected factory wiring is missing, report that concrete gap and prepare the smallest necessary change within the user's request.
 
 ## Verify the local baseline first
+
+For this shipped factory, the complete local initialization is `npm ci`, `npm run check`, and `npm run proof:clean-clone`. Use `npm run proof:docker` for the explicit expensive proof when Docker is available. The clean-clone proof exports tracked source only, installs from `package-lock.json`, and runs the root check in a temporary directory; it is the deterministic packaging proof, not a deployment.
 
 The unmodified starter must boot with `docker compose up` after cloning and serve Hello World plus a backend health route. AWS credentials, model credentials, an external identity-provider account, a manually copied environment file, and a separate port-finder service must not be required for this default mode. A bundled self-hosted IdP may use synthetic local fixture configuration. Downloading public images/packages may require internet.
 
@@ -76,7 +78,13 @@ The agent controls a real browser using the CI runner's browser tools. Its behav
 
 Require an outcome for every expected scenario/example identity. True lack of browser observability may be an explicit no-op only when the canonical feature declares eligibility and its reason. Unexpected non-observability fails for feature correction; the agent cannot grant itself a new exemption. Inability to log in, failed navigation, uncertainty, provider errors, missing evidence/results, or timeouts must not become no-ops; they fail verification. The owner controls provider spending limits; the factory does not impose a separate dollar cap.
 
-## Finish GitHub enrollment and prove the path
+## Cloud boundary for this shipped version
+
+This factory does not ship GitHub enrollment, AWS resource creation, DNS delegation, browser-agent CI, or production deployment. Do not infer those capabilities from the CDK synthesis command or the future adapter notes. `npm run synth:foundation` is credential-free synthesis only; the local Compose and Keycloak proof is the supported initialization outcome.
+
+If a later repository adds an explicit cloud adapter, inspect that repository's actual scripts and instructions before using this section.
+
+## Finish GitHub enrollment and prove the path (future adapter only)
 
 Use actual workflow names from this repository to configure required checks. Public is the default visibility, and public GitHub repositories support protected-branch checks. A private choice may have different account entitlements; check before promising enforcement.
 
