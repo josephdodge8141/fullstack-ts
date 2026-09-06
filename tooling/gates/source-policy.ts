@@ -46,7 +46,6 @@ export async function checkSourcePolicy(root: string): Promise<string[]> {
     ...knownDirectoryError(entry.file),
     ...backendImportErrors(entry.file, entry.text),
     ...frontendTransportErrors(entry.file, entry.text),
-    ...runtimeCapabilityImportErrors(entry.file, entry.text),
   ]);
   for (const entry of sourceText) {
     if (SUPPRESSION.test(entry.text)) {
@@ -148,26 +147,6 @@ function frontendTransportErrors(file: string, text: string): string[] {
     return [`${file} uses frontend transport outside frontend/services`];
   }
   return [];
-}
-
-function runtimeCapabilityImportErrors(file: string, text: string): string[] {
-  if (!file.startsWith('infra/runtime/') || isTest(file)) return [];
-  return importSpecifiers(text).flatMap((specifier) => {
-    const target = specifier.startsWith('.')
-      ? path.posix.normalize(path.posix.join(path.posix.dirname(file), specifier))
-      : specifier;
-    const permanentCapability =
-      target === 'aws-cdk' ||
-      target.startsWith('aws-cdk/') ||
-      target === 'aws-cdk-lib' ||
-      target.startsWith('aws-cdk-lib/') ||
-      target === '@aws-sdk/client-cloudformation' ||
-      target.startsWith('@aws-sdk/client-cloudformation/') ||
-      target.startsWith('infra/foundation/');
-    return permanentCapability
-      ? [`${file} imports permanent infrastructure capability: ${specifier}`]
-      : [];
-  });
 }
 
 function importSpecifiers(text: string): readonly string[] {

@@ -20,7 +20,6 @@ export const foundationOutputsSchema = z
     ClusterArn: z.string().min(1),
     FrontendRepositoryUri: z.string().min(1),
     LogGroupName: z.string().min(1),
-    PreviewAdapterPolicyArn: z.string().min(1),
     PreviewZoneId: z.string().min(1),
     PreviewZoneName: z.string().min(1),
     PublicSubnetIds: z.string().min(1),

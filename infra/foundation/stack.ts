@@ -1,17 +1,9 @@
-import {
-  ArnFormat,
-  CfnOutput,
-  Duration,
-  RemovalPolicy,
-  Stack,
-  Tags,
-  type StackProps,
-} from 'aws-cdk-lib';
+import { CfnOutput, Duration, RemovalPolicy, Stack, Tags, type StackProps } from 'aws-cdk-lib';
 import { CfnSecurityGroup, SubnetType, Vpc } from 'aws-cdk-lib/aws-ec2';
 import { Repository, TagMutability } from 'aws-cdk-lib/aws-ecr';
 import { CfnCluster } from 'aws-cdk-lib/aws-ecs';
 import { AttributeType, BillingMode, Table } from 'aws-cdk-lib/aws-dynamodb';
-import { ManagedPolicy, PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
+import { PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { HostedZone } from 'aws-cdk-lib/aws-route53';
 import type { Construct } from 'constructs';
@@ -109,91 +101,6 @@ export class PreviewFoundationStack extends Stack {
       }),
     );
 
-    const previewTaskDefinitionArn = this.formatArn({
-      arnFormat: ArnFormat.SLASH_RESOURCE_NAME,
-      resource: 'task-definition',
-      resourceName: `${config.applicationName}-preview-*`,
-      service: 'ecs',
-    });
-    const previewTaskArn = this.formatArn({
-      arnFormat: ArnFormat.SLASH_RESOURCE_NAME,
-      resource: 'task',
-      resourceName: `${config.applicationName}-preview/*`,
-      service: 'ecs',
-    });
-    const previewZoneArn = this.formatArn({
-      account: '',
-      arnFormat: ArnFormat.SLASH_RESOURCE_NAME,
-      region: '',
-      resource: 'hostedzone',
-      resourceName: config.previewZoneId,
-      service: 'route53',
-    });
-    const adapterPolicy = new ManagedPolicy(this, 'PreviewAdapterPolicy', {
-      description: 'Generation-scoped preview operations; attach during repository enrollment',
-      managedPolicyName: `${config.applicationName}-preview-adapter`,
-      statements: [
-        new PolicyStatement({ actions: ['ecr:GetAuthorizationToken'], resources: ['*'] }),
-        new PolicyStatement({
-          actions: [
-            'ecr:BatchCheckLayerAvailability',
-            'ecr:BatchGetImage',
-            'ecr:CompleteLayerUpload',
-            'ecr:DescribeImages',
-            'ecr:GetDownloadUrlForLayer',
-            'ecr:InitiateLayerUpload',
-            'ecr:PutImage',
-            'ecr:UploadLayerPart',
-          ],
-          resources: [frontendRepository.repositoryArn, backendRepository.repositoryArn],
-        }),
-        new PolicyStatement({ actions: ['ecs:RegisterTaskDefinition'], resources: ['*'] }),
-        new PolicyStatement({
-          actions: ['ecs:RunTask'],
-          conditions: { ArnEquals: { 'ecs:cluster': cluster.attrArn } },
-          resources: [previewTaskDefinitionArn],
-        }),
-        new PolicyStatement({
-          actions: [
-            'ecs:DeregisterTaskDefinition',
-            'ecs:DescribeTaskDefinition',
-            'ecs:TagResource',
-          ],
-          resources: [previewTaskDefinitionArn],
-        }),
-        new PolicyStatement({
-          actions: ['ecs:StopTask'],
-          conditions: { ArnEquals: { 'ecs:cluster': cluster.attrArn } },
-          resources: [previewTaskArn],
-        }),
-        new PolicyStatement({
-          actions: ['ecs:DescribeTasks', 'ecs:ListTasks'],
-          conditions: { ArnEquals: { 'ecs:cluster': cluster.attrArn } },
-          resources: ['*'],
-        }),
-        new PolicyStatement({
-          actions: [
-            'dynamodb:DeleteItem',
-            'dynamodb:GetItem',
-            'dynamodb:PutItem',
-            'dynamodb:UpdateItem',
-          ],
-          resources: [stateTable.tableArn],
-        }),
-        new PolicyStatement({
-          actions: ['route53:ChangeResourceRecordSets', 'route53:ListResourceRecordSets'],
-          resources: [previewZoneArn],
-        }),
-        new PolicyStatement({ actions: ['route53:GetChange'], resources: ['*'] }),
-        new PolicyStatement({ actions: ['ec2:DescribeNetworkInterfaces'], resources: ['*'] }),
-        new PolicyStatement({
-          actions: ['iam:PassRole'],
-          conditions: { StringEquals: { 'iam:PassedToService': 'ecs-tasks.amazonaws.com' } },
-          resources: [taskExecutionRole.roleArn],
-        }),
-      ],
-    });
-
     const previewZone = HostedZone.fromHostedZoneAttributes(this, 'PreviewZone', {
       hostedZoneId: config.previewZoneId,
       zoneName: config.previewZoneName,
@@ -204,7 +111,6 @@ export class PreviewFoundationStack extends Stack {
       ClusterArn: cluster.attrArn,
       FrontendRepositoryUri: frontendRepository.repositoryUri,
       LogGroupName: logGroup.logGroupName,
-      PreviewAdapterPolicyArn: adapterPolicy.managedPolicyArn,
       PreviewZoneId: previewZone.hostedZoneId,
       PreviewZoneName: previewZone.zoneName,
       PublicSubnetIds: vpc.publicSubnets.map((subnet) => subnet.subnetId).join(','),

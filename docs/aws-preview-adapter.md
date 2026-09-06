@@ -12,8 +12,7 @@ The stack owns resources that remain across pull requests:
 - one on-demand DynamoDB table for lifecycle state and ownership;
 - one shared CloudWatch log group; and
 - a reference to an existing Route 53 preview child zone;
-- one ECS task execution role restricted to pulling the two repositories and writing the shared log group; and
-- one managed policy containing the maximum permissions a future enrolled preview adapter may receive.
+- one ECS task execution role restricted to pulling the two repositories and writing the shared log group.
 
 The table, repositories and log group use retain policies. Repository tags are immutable and a lifecycle rule expires images after fourteen days, bounding storage while retaining short-lived debugging evidence. The supplied hosted-zone ID and name are references, so synthesis and deployment do not create, delegate or replace a DNS zone. The typed `FoundationOutputs` contract covers every emitted identifier the future adapter needs.
 
@@ -50,10 +49,8 @@ The adapter will consume the synthesized stack outputs and the effects from `inf
 6. For `cleanup-preview`, verify the complete ownership tuple before removing the owned DNS record, stopping the owned task, confirming it stopped and deregistering its task definition.
 7. Reconcile uncertain provider responses through the reducer's idempotent effects. Never convert uncertainty into success.
 
-The adapter may create only generation-scoped task definitions, tasks and DNS records. It may write the lifecycle table, push immutable images and pass only the emitted task execution role to ECS. The emitted adapter policy scopes image actions to the two repositories, state actions to the one table, task execution to the one cluster and task-family prefix, DNS actions to the preview child zone and `iam:PassRole` to the execution role. Route 53 cannot scope changes below a hosted zone, so the reducer's persisted ownership tuple remains mandatory before each record mutation. The policy grants no VPC, security-group, cluster, repository, table, hosted-zone or CloudFormation control-plane mutation.
+The future enrollment and runtime implementation must validate every provider request before making the call. That validation must include the task-family prefix, Fargate compatibility, a non-privileged task shape, bounded CPU and memory, the exact emitted public subnet IDs and security-group ID, the emitted task execution role, cluster, ECR repository, lifecycle table and hosted-zone scope, and the immutable repository/pull-request/generation ownership tuple. It must also prove ownership of each generation before task, state or DNS mutation. These are future adapter responsibilities, not permissions enforced by a shipped managed policy or a runtime import gate.
 
-Dynamic source is also barred from importing CDK, the foundation module or the CloudFormation client. This static gate and the adapter policy enforce separate parts of the same boundary; neither replaces ownership checks around individual provider operations.
-
-The future implementation also needs narrowly scoped GitHub OIDC enrollment. Its role must restrict the immutable repository identity and trusted workflow/ref conditions, separate foundation deployment from dynamic preview permissions, and attach the emitted adapter policy without adding permissions. Wave 4 creates no OIDC provider or caller role.
+The future implementation also needs narrowly scoped GitHub OIDC enrollment. Its role must restrict the immutable repository identity and trusted workflow/ref conditions, separate foundation deployment from dynamic preview permissions, and enforce the same enrollment and runtime validation boundary before provider calls. Wave 4 creates no OIDC provider, caller role or runtime adapter.
 
 No live AWS lifecycle, DNS delegation, GitHub enrollment or provider authorization has been proven in this wave.

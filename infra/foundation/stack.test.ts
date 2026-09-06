@@ -29,7 +29,7 @@ test('factory.foundation.synth creates only reusable permanent resources', () =>
   template.resourceCountIs('AWS::Logs::LogGroup', 1);
   template.resourceCountIs('AWS::EC2::SecurityGroup', 1);
   template.resourceCountIs('AWS::IAM::Role', 1);
-  template.resourceCountIs('AWS::IAM::ManagedPolicy', 1);
+  template.resourceCountIs('AWS::IAM::ManagedPolicy', 0);
   template.hasResourceProperties('AWS::ECR::Repository', {
     ImageTagMutability: 'IMMUTABLE',
     LifecyclePolicy: Match.objectLike({}),
@@ -40,7 +40,7 @@ test('factory.foundation.synth creates only reusable permanent resources', () =>
   });
 });
 
-test('factory.foundation.synth exposes task execution and bounded adapter capabilities', () => {
+test('factory.foundation.synth exposes task execution and bounded image capabilities', () => {
   const template = foundationTemplate().toJSON();
   const outputs = Object.keys(template.Outputs as Record<string, unknown>);
   assert.deepEqual(
@@ -50,7 +50,6 @@ test('factory.foundation.synth exposes task execution and bounded adapter capabi
       'ClusterArn',
       'FrontendRepositoryUri',
       'LogGroupName',
-      'PreviewAdapterPolicyArn',
       'PreviewZoneId',
       'PreviewZoneName',
       'PublicSubnetIds',
@@ -61,12 +60,7 @@ test('factory.foundation.synth exposes task execution and bounded adapter capabi
     ].sort(),
   );
   const serialized = JSON.stringify(template);
-  for (const requiredAction of [
-    'ecr:BatchGetImage',
-    'ecs:RunTask',
-    'iam:PassRole',
-    'route53:ChangeResourceRecordSets',
-  ]) {
+  for (const requiredAction of ['ecr:BatchGetImage', 'logs:PutLogEvents']) {
     assert.match(serialized, new RegExp(requiredAction));
   }
   for (const forbiddenAction of [
