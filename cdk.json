@@ -1,0 +1,3 @@
+{
+  "app": "npx tsx infra/foundation/app.ts"
+}

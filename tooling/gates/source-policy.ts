@@ -97,7 +97,8 @@ function knownDirectoryError(file: string): string[] {
       'steps',
       'utils',
     ]);
-  if (parts[0] === 'infra') return knownChild(file, parts, ROOT_SOURCE_FILES.infra, ['runtime']);
+  if (parts[0] === 'infra')
+    return knownChild(file, parts, ROOT_SOURCE_FILES.infra, ['foundation', 'runtime']);
   if (parts[0] === 'packages' && parts[1] === 'zod')
     return knownChild(file, parts.slice(1), ROOT_SOURCE_FILES['packages/zod'], ['schemas']);
   if (parts[0] === 'packages' && parts[1] === 'cucumber')

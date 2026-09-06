@@ -6,6 +6,8 @@ All product and meaningful factory work starts in `packages/cucumber/features`. 
 
 Structured application data comes from `@app/schemas`. The backend follows routes → controllers → services → config-supplied connections. React pages own most view behavior, while frontend services are restricted to HTTP transport and response validation. Local dependencies and preview containers are declared once in `docker-compose.yaml`.
 
-CDK creates permanent shared foundations and enrolls repositories. Ordinary pull-request deployments use versioned runtime commands against that foundation. A preview is owned by immutable repository ID, pull-request number and generation. The lifecycle controller is the only writer for preview DNS and uses durable ownership records before mutation.
+CDK synthesizes permanent shared foundations. Ordinary pull-request deployments will use versioned runtime commands against that foundation. A preview is owned by immutable repository ID, pull-request number and generation. The lifecycle controller is the only permitted writer for preview DNS and uses durable ownership records before mutation.
+
+The current foundation is synthesis-only and performs no account lookup or deployment. Its resource and future adapter boundary are defined in `aws-preview-adapter.md`; GitHub/AWS enrollment and the dynamic provider implementation remain future work.
 
 See `CLAUDE.md` or `AGENTS.md` for contribution rules and the other files in this directory for the supported preview and initialization contracts.
