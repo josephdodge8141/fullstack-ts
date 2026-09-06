@@ -2,6 +2,8 @@
 
 Opinionated TypeScript starter: React, Node, shared Zod contracts, Cucumber behavior-first development, and a bounded preview lifecycle reducer.
 
-Wave 1 establishes the shared catalog, backend health endpoint, frontend Hello World, source-policy gate, and a provider-free preview state machine. It does not yet ship Compose startup, authentication, preview adapters, CDK, CI workflows, or cloud deployment.
+Wave 2 adds a credential-free local slice: Caddy, Keycloak backed by Postgres, backend OIDC/session handling, and frontend signup, login, and logout. Public Hello World and `/api/v1/health` remain available without a session.
 
-The later local-first order is: make Compose dependencies runnable, add local authentication and application behavior, connect preview adapters to the reducer, then add permanent infrastructure and automation. Run `npm run check` for the current repository gate.
+Run `docker compose up --build`, then open [http://app.localhost:8088](http://app.localhost:8088). The checked-in realm import and `.env.example` use local dummy credentials only. To exercise the real stack browser coverage, run `npm run test:browser:compose -w @app/frontend` while Compose is running. Run `npm run check` for the current repository gate.
+
+The later local-first order is: connect preview adapters to the reducer, then add permanent infrastructure and automation.

@@ -77,6 +77,7 @@ async function fixture(files: Readonly<Record<string, string>> = {}): Promise<st
     'frontend/App.tsx': 'export {};\n',
     'frontend/main.tsx': 'export {};\n',
     'frontend/playwright.config.ts': 'export {};\n',
+    'frontend/playwright.compose.config.ts': 'export {};\n',
     'frontend/vite.config.ts': 'export {};\n',
     'frontend/pages/home.tsx': 'export const Home = null;\n',
     'infra/runtime/protocol.ts': 'export const protocol = 1;\n',

@@ -1,0 +1,28 @@
+{
+  "realm": "local",
+  "enabled": true,
+  "displayName": "Local Starter",
+  "registrationAllowed": true,
+  "registrationEmailAsUsername": true,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "verifyEmail": false,
+  "resetPasswordAllowed": true,
+  "passwordPolicy": "length(12)",
+  "clients": [
+    {
+      "clientId": "local-web",
+      "name": "Local web application",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": ["http://app.localhost:8088/api/v1/auth/callback"],
+      "webOrigins": ["http://app.localhost:8088"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      }
+    }
+  ]
+}

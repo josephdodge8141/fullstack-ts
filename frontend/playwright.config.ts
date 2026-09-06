@@ -15,6 +15,7 @@ const frontendUrl = `http://127.0.0.1:${frontendPort}`;
 
 export default defineConfig({
   testDir: './e2e',
+  testMatch: '**/public.spec.ts',
   webServer: [
     {
       command: 'npm run start -w @app/backend',

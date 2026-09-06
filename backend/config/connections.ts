@@ -1,3 +1,6 @@
+import { loadEnvironment, type Environment } from './environment.js';
+import { createOidcConnection, type AuthConnection } from './oidc.js';
+
 export interface ConnectionLifecycle {
   close(): Promise<void>;
   /** Abort all retained resources synchronously and idempotently. */
@@ -14,17 +17,23 @@ export interface HealthConnection {
 
 export interface Connections extends ConnectionLifecycle {
   readonly health: HealthConnection;
+  readonly auth: AuthConnection;
 }
 
 /**
  * The starter has no external dependency yet, but its connection contract is
  * explicit so acceptance can replace the outbound adapter later.
  */
-export function createConnections(): Connections {
+export function createConnections(environment: Environment = loadEnvironment()): Connections {
   return {
     health: {
       getHealth: (): unknown => ({ status: 'ok' }),
     },
+    auth: createOidcConnection({
+      issuer: environment.oidcIssuer,
+      clientId: environment.oidcClientId,
+      redirectUri: `${environment.publicOrigin}/api/v1/auth/callback`,
+    }),
     close: async (): Promise<void> => undefined,
     forceAbort: (): void => undefined,
   };
