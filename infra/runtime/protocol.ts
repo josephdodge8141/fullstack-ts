@@ -264,8 +264,13 @@ function parseGeneration(value: unknown, path: string): PreviewGeneration {
   const expiresAt = nullableString(parsed, 'expiresAt', path);
   if (healthyAt !== null) timestamp(healthyAt, `${path}.healthyAt`);
   if (expiresAt !== null) timestamp(expiresAt, `${path}.expiresAt`);
-  if ((phase === 'healthy') !== (healthyAt !== null && expiresAt !== null))
-    fail(path, 'health timestamps do not match phase');
+  const hasHealthyAt = healthyAt !== null;
+  const hasExpiresAt = expiresAt !== null;
+  if (hasHealthyAt !== hasExpiresAt)
+    fail(path, 'health timestamps must be both null or both present');
+  if (phase === 'healthy' && !hasHealthyAt) fail(path, 'healthy phase requires health timestamps');
+  if (phase === 'launching' && hasHealthyAt)
+    fail(path, 'launching phase cannot have health timestamps');
   if ((phase === 'cleaning') !== (cleanupReason !== null))
     fail(path, 'cleanup reason does not match phase');
   return {
@@ -380,6 +385,14 @@ function advance(
   };
 }
 
+function semanticDuplicate(
+  state: LifecycleState,
+  command: LifecycleCommand,
+  reason: string,
+): LifecycleTransition {
+  return duplicate(advance(state, command, {}), reason);
+}
+
 function generation(
   identityValue: PreviewIdentity,
   ordinal: number,
@@ -444,7 +457,7 @@ export function transitionLifecycle(input: LifecycleTransitionInput): LifecycleT
     if (state.closed) return rejected(state, 'preview-is-closed');
     if (state.active === null) return rejected(state, 'preview-does-not-exist');
     if (state.active.revision === command.revision)
-      return duplicate(state, 'revision-already-admitted');
+      return semanticDuplicate(state, command, 'revision-already-admitted');
     if (state.retiring !== null) return rejected(state, 'retiring-cleanup-pending', true);
     if (state.active.phase === 'cleaning') return rejected(state, 'active-cleanup-pending', true);
     const active = generation(state.identity, state.generationCounter + 1, command.revision, now);
@@ -458,7 +471,8 @@ export function transitionLifecycle(input: LifecycleTransitionInput): LifecycleT
   }
   if (command.type === 'healthy') {
     if (state.active?.id !== command.generation) return rejected(state, 'generation-is-not-active');
-    if (state.active.phase === 'healthy') return duplicate(state, 'generation-is-already-healthy');
+    if (state.active.phase === 'healthy')
+      return semanticDuplicate(state, command, 'generation-is-already-healthy');
     if (state.active.phase === 'cleaning') return rejected(state, 'generation-is-cleaning');
     if (Date.parse(now) > Date.parse(state.active.startupDeadline))
       return rejected(state, 'startup-deadline-elapsed');
@@ -472,7 +486,8 @@ export function transitionLifecycle(input: LifecycleTransitionInput): LifecycleT
   }
   if (command.type === 'deadline') {
     if (state.active?.id !== command.generation) return rejected(state, 'generation-is-not-active');
-    if (state.active.phase === 'cleaning') return duplicate(state, 'cleanup-already-scheduled');
+    if (state.active.phase === 'cleaning')
+      return semanticDuplicate(state, command, 'cleanup-already-scheduled');
     const deadline =
       command.deadline === 'startup' ? state.active.startupDeadline : state.active.expiresAt;
     const expectedPhase = command.deadline === 'startup' ? 'launching' : 'healthy';

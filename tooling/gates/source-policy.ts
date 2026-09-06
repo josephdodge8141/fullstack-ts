@@ -13,6 +13,20 @@ const BACKEND_LAYERS: Readonly<Record<string, number>> = {
   routes: 3,
 };
 const REQUIRED_PROJECTS = ['backend', 'frontend', 'infra', 'packages/zod', 'packages/cucumber'];
+const ROOT_SOURCE_FILES = {
+  backend: [
+    'app.test.ts',
+    'app.ts',
+    'index.test.ts',
+    'index.ts',
+    'shutdown-abort-failure-child.ts',
+    'shutdown-child.ts',
+  ],
+  frontend: ['App.tsx', 'main.tsx', 'playwright.config.ts', 'vite.config.ts'],
+  infra: [],
+  'packages/zod': ['index.ts', 'server.ts'],
+  'packages/cucumber': ['index.ts'],
+} as const;
 const SUPPRESSION = new RegExp(
   ['@ts-(?:ignore|expect-error|nocheck)', 'eslint' + '-disable'].join('|'),
 );
@@ -56,7 +70,7 @@ function knownDirectoryError(file: string): string[] {
   const parts = file.split('/');
   if (file === 'eslint.config.ts') return [];
   if (parts[0] === 'backend')
-    return knownChild(file, parts, [
+    return knownChild(file, parts, ROOT_SOURCE_FILES.backend, [
       'config',
       'controllers',
       'middleware',
@@ -65,7 +79,7 @@ function knownDirectoryError(file: string): string[] {
       'services',
     ]);
   if (parts[0] === 'frontend')
-    return knownChild(file, parts, [
+    return knownChild(file, parts, ROOT_SOURCE_FILES.frontend, [
       'assets',
       'components',
       'context',
@@ -75,17 +89,23 @@ function knownDirectoryError(file: string): string[] {
       'services',
       'utils',
     ]);
-  if (parts[0] === 'infra') return knownChild(file, parts, ['runtime']);
+  if (parts[0] === 'infra') return knownChild(file, parts, ROOT_SOURCE_FILES.infra, ['runtime']);
   if (parts[0] === 'packages' && parts[1] === 'zod')
-    return knownChild(file, parts.slice(1), ['schemas']);
+    return knownChild(file, parts.slice(1), ROOT_SOURCE_FILES['packages/zod'], ['schemas']);
   if (parts[0] === 'packages' && parts[1] === 'cucumber')
-    return knownChild(file, parts.slice(1), ['catalog']);
+    return knownChild(file, parts.slice(1), ROOT_SOURCE_FILES['packages/cucumber'], ['catalog']);
   if (parts[0] === 'tooling' && parts[1] === 'gates') return [];
   return [`${file} is outside a known source directory`];
 }
 
-function knownChild(file: string, parts: readonly string[], children: readonly string[]): string[] {
-  if (parts.length === 2 || children.includes(parts[1] ?? '')) return [];
+function knownChild(
+  file: string,
+  parts: readonly string[],
+  rootFiles: readonly string[],
+  children: readonly string[],
+): string[] {
+  if (parts.length === 2 && rootFiles.includes(parts[1] ?? '')) return [];
+  if (parts.length > 2 && children.includes(parts[1] ?? '')) return [];
   return [`${file} is outside a known source directory`];
 }
 

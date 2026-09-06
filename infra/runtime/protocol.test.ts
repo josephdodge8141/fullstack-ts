@@ -181,6 +181,174 @@ test('first timely health creates one fixed expiry and duplicates cannot extend 
   assert.equal(state.active?.cleanupReason, 'expired');
 });
 
+test('a newer semantic duplicate consumes its sequence before delayed events arrive', () => {
+  let state = accepted(null, admit('admit-a', 1, null), T0);
+  const generation = state.active;
+  assert.ok(generation);
+  state = accepted(
+    state,
+    command<HealthCommand>(state, {
+      type: 'healthy',
+      commandId: 'healthy-a',
+      eventSequence: 2,
+      generation: generation.id,
+    }),
+    T1,
+  );
+  const healthyAt = state.active?.healthyAt;
+  const expiresAt = state.active?.expiresAt;
+  const duplicate = apply(
+    state,
+    command<HealthCommand>(state, {
+      type: 'healthy',
+      commandId: 'healthy-semantic-duplicate',
+      eventSequence: 100,
+      generation: generation.id,
+    }),
+    T2,
+  );
+  assert.equal(duplicate.decision, 'duplicate');
+  assert.equal(duplicate.state?.stateRevision, state.stateRevision + 1);
+  assert.equal(duplicate.state?.lastEventSequence, 100);
+  assert.equal(duplicate.state?.lastCommandId, 'healthy-semantic-duplicate');
+  assert.equal(duplicate.state?.active?.healthyAt, healthyAt);
+  assert.equal(duplicate.state?.active?.expiresAt, expiresAt);
+
+  const delayedAdmission = apply(
+    duplicate.state ?? null,
+    admit('delayed-admit', 3, duplicate.state?.stateRevision ?? 0, REVISION_B),
+    T2,
+  );
+  assert.equal(delayedAdmission.decision, 'rejected');
+  assert.equal(delayedAdmission.reason, 'event-is-not-newer');
+});
+
+test('healthy generations remain parseable through close and cleanup completion', () => {
+  let state = accepted(null, admit('admit-a', 1, null), T0);
+  const generation = state.active;
+  assert.ok(generation);
+  state = accepted(
+    state,
+    command<HealthCommand>(state, {
+      type: 'healthy',
+      commandId: 'healthy-a',
+      eventSequence: 2,
+      generation: generation.id,
+    }),
+    T1,
+  );
+
+  const close = apply(
+    state,
+    command<CloseCommand>(state, { type: 'close', commandId: 'close', eventSequence: 3 }),
+    T2,
+  );
+  assert.equal(close.state?.active?.phase, 'cleaning');
+  assert.doesNotThrow(() => lifecycleStateSchema.parse(close.state));
+
+  state = accepted(
+    close.state ?? null,
+    command<LifecycleCommand>(stateAfter(close), {
+      type: 'reconcile',
+      commandId: 'reconcile-close',
+      eventSequence: 4,
+    }),
+    T2,
+  );
+  state = accepted(
+    state,
+    command<CleanupCompleteCommand>(state, {
+      type: 'cleanup-complete',
+      commandId: 'cleanup-close',
+      eventSequence: 5,
+      generation: generation.id,
+    }),
+    T2,
+  );
+  assert.equal(state.active, null);
+});
+
+test('healthy generations remain parseable through expiry reconciliation and cleanup', () => {
+  let state = accepted(null, admit('admit-a', 1, null), T0);
+  const generation = state.active;
+  assert.ok(generation);
+  state = accepted(
+    state,
+    command<HealthCommand>(state, {
+      type: 'healthy',
+      commandId: 'healthy-a',
+      eventSequence: 2,
+      generation: generation.id,
+    }),
+    T1,
+  );
+  const expiresAt = state.active?.expiresAt;
+  assert.ok(expiresAt);
+
+  const expiry = apply(
+    state,
+    command<DeadlineCommand>(state, {
+      type: 'deadline',
+      commandId: 'expire-a',
+      eventSequence: 3,
+      generation: generation.id,
+      deadline: 'expiry',
+    }),
+    expiresAt,
+  );
+  assert.equal(expiry.state?.active?.phase, 'cleaning');
+  assert.doesNotThrow(() => lifecycleStateSchema.parse(expiry.state));
+
+  state = accepted(
+    expiry.state ?? null,
+    command<LifecycleCommand>(stateAfter(expiry), {
+      type: 'reconcile',
+      commandId: 'reconcile-expiry',
+      eventSequence: 4,
+    }),
+    expiresAt,
+  );
+  state = accepted(
+    state,
+    command<CleanupCompleteCommand>(state, {
+      type: 'cleanup-complete',
+      commandId: 'cleanup-expiry',
+      eventSequence: 5,
+      generation: generation.id,
+    }),
+    expiresAt,
+  );
+  assert.equal(state.active, null);
+});
+
+test('schemas reject inconsistent health timestamp pairs in cleaning generations', () => {
+  const state = accepted(null, admit('admit-a', 1, null), T0);
+  const generation = state.active;
+  assert.ok(generation);
+  const missingExpiry = {
+    ...state,
+    active: {
+      ...generation,
+      phase: 'cleaning' as const,
+      cleanupReason: 'closed' as const,
+      healthyAt: T1,
+      expiresAt: null,
+    },
+  };
+  const missingHealthyAt = {
+    ...state,
+    active: {
+      ...generation,
+      phase: 'cleaning' as const,
+      cleanupReason: 'closed' as const,
+      healthyAt: null,
+      expiresAt: T1,
+    },
+  };
+  assert.throws(() => lifecycleStateSchema.parse(missingExpiry));
+  assert.throws(() => lifecycleStateSchema.parse(missingHealthyAt));
+});
+
 test('startup timeout and expiry schedule cleanup only when their deadline is due', () => {
   let state = accepted(null, admit('admit-a', 1, null), T0);
   const generation = state.active;

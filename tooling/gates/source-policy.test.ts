@@ -6,9 +6,16 @@ import test from 'node:test';
 
 import { checkSourcePolicy } from './source-policy.js';
 
-test('accepts the ordinary known directories and project coverage', async () => {
+test('accepts the ordinary known directories, root allowlists, and project coverage', async () => {
   const root = await fixture();
   assert.deepEqual(await checkSourcePolicy(root), []);
+});
+
+test('rejects an unallowlisted backend root file', async () => {
+  const root = await fixture({ 'backend/worker.ts': 'export const worker = 1;\n' });
+  assert.deepEqual(await checkSourcePolicy(root), [
+    'backend/worker.ts is outside a known source directory',
+  ]);
 });
 
 test('rejects unknown placement and obvious backend direction inversions', async () => {
@@ -55,15 +62,26 @@ async function fixture(files: Readonly<Record<string, string>> = {}): Promise<st
     'packages/zod/tsconfig.json': JSON.stringify({ include: ['**/*.ts'] }),
     'packages/cucumber/tsconfig.json': JSON.stringify({ include: ['**/*.ts'] }),
     'eslint.config.ts': 'export default [];\n',
+    'backend/app.test.ts': 'export {};\n',
+    'backend/app.ts': 'export {};\n',
+    'backend/index.test.ts': 'export {};\n',
+    'backend/index.ts': 'export {};\n',
+    'backend/shutdown-abort-failure-child.ts': 'export {};\n',
+    'backend/shutdown-child.ts': 'export {};\n',
     'backend/config/environment.ts': 'export const environment = {};\n',
     'backend/models/health.ts': 'export const health = {};\n',
     'backend/services/health.ts': "import '../models/health.js';\n",
     'backend/controllers/health.ts': "import '../services/health.js';\n",
     'backend/routes/health.ts': "import '../controllers/health.js';\n",
     'frontend/services/health.ts': "fetch('/api/v1/health');\n",
+    'frontend/App.tsx': 'export {};\n',
+    'frontend/main.tsx': 'export {};\n',
+    'frontend/playwright.config.ts': 'export {};\n',
+    'frontend/vite.config.ts': 'export {};\n',
     'frontend/pages/home.tsx': 'export const Home = null;\n',
     'infra/runtime/protocol.ts': 'export const protocol = 1;\n',
     'packages/zod/index.ts': 'export {};\n',
+    'packages/zod/server.ts': 'export {};\n',
     'packages/cucumber/index.ts': 'export {};\n',
     'tooling/gates/example.ts': 'export {};\n',
   };
