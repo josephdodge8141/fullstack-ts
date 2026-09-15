@@ -51,6 +51,32 @@ async function skillNames(root: string, base: '.claude' | '.agents'): Promise<st
   }
 }
 
+async function skillFiles(
+  root: string,
+  base: '.claude' | '.agents',
+  skill: string,
+): Promise<string[]> {
+  const skillRoot = path.join(root, base, 'skills', skill);
+  return nestedFiles(skillRoot);
+}
+
+async function nestedFiles(root: string, relative = ''): Promise<string[]> {
+  try {
+    const entries = await readdir(path.join(root, relative), { withFileTypes: true });
+    const files = await Promise.all(
+      entries.map(async (entry) => {
+        const next = path.posix.join(relative, entry.name);
+        if (entry.isDirectory()) return nestedFiles(root, next);
+        return entry.isFile() ? [next] : [];
+      }),
+    );
+    return files.flat().sort((left, right) => left.localeCompare(right));
+  } catch (error: unknown) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return [];
+    throw error;
+  }
+}
+
 export async function checkInstructions(
   root: string,
   folders: readonly string[] = governedFolders,
@@ -82,16 +108,31 @@ export async function checkInstructions(
       errors.push(`.agents/skills/${name}/SKILL.md has no canonical source`);
   }
   for (const name of canonicalNames.sort()) {
-    const canonicalPath = `.claude/skills/${name}/SKILL.md`;
-    const mirrorPath = `.agents/skills/${name}/SKILL.md`;
-    const [canonical, mirror] = await Promise.all([
-      optionalText(path.join(root, canonicalPath)),
-      optionalText(path.join(root, mirrorPath)),
+    const [canonicalFiles, mirrorFiles] = await Promise.all([
+      skillFiles(root, '.claude', name),
+      skillFiles(root, '.agents', name),
     ]);
-    if (!mirrorSet.has(name) || mirror === undefined) {
-      errors.push(`${mirrorPath} is missing`);
-    } else if (canonical !== mirror) {
-      errors.push(`${canonicalPath} and ${mirrorPath} differ`);
+    const canonicalFileSet = new Set(canonicalFiles);
+    const mirrorFileSet = new Set(mirrorFiles);
+    for (const file of mirrorFiles) {
+      if (!canonicalFileSet.has(file)) {
+        errors.push(`.agents/skills/${name}/${file} has no canonical source`);
+      }
+    }
+    for (const file of canonicalFiles) {
+      const canonicalPath = `.claude/skills/${name}/${file}`;
+      const mirrorPath = `.agents/skills/${name}/${file}`;
+      if (!mirrorSet.has(name) || !mirrorFileSet.has(file)) {
+        errors.push(`${mirrorPath} is missing`);
+        continue;
+      }
+      const [canonical, mirror] = await Promise.all([
+        optionalText(path.join(root, canonicalPath)),
+        optionalText(path.join(root, mirrorPath)),
+      ]);
+      if (canonical !== mirror) {
+        errors.push(`${canonicalPath} and ${mirrorPath} differ`);
+      }
     }
   }
   return errors.sort();

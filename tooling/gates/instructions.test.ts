@@ -23,17 +23,22 @@ test('rejects instruction contents that differ', async () => {
   assert.deepEqual(result, ['frontend/CLAUDE.md and frontend/AGENTS.md differ']);
 });
 
-test('rejects missing and changed skill mirrors', async () => {
+test('rejects missing and changed skill mirrors including supporting resources', async () => {
   const root = await mkdtemp(path.join(tmpdir(), 'instructions-'));
-  await mkdir(path.join(root, '.claude/skills/one'), { recursive: true });
-  await mkdir(path.join(root, '.agents/skills/one'), { recursive: true });
+  await mkdir(path.join(root, '.claude/skills/one/scripts'), { recursive: true });
+  await mkdir(path.join(root, '.agents/skills/one/scripts'), { recursive: true });
   await mkdir(path.join(root, '.agents/skills/extra'), { recursive: true });
   await writeFile(path.join(root, '.claude/skills/one/SKILL.md'), 'canonical\n');
   await writeFile(path.join(root, '.agents/skills/one/SKILL.md'), 'changed\n');
+  await writeFile(path.join(root, '.claude/skills/one/scripts/inventory.sh'), 'canonical script\n');
+  await writeFile(path.join(root, '.agents/skills/one/scripts/inventory.sh'), 'changed script\n');
+  await writeFile(path.join(root, '.agents/skills/one/scripts/extra.sh'), 'extra script\n');
   await writeFile(path.join(root, '.agents/skills/extra/SKILL.md'), 'extra\n');
   const result = await checkInstructions(root, []);
   assert.deepEqual(result, [
     '.agents/skills/extra/SKILL.md has no canonical source',
+    '.agents/skills/one/scripts/extra.sh has no canonical source',
     '.claude/skills/one/SKILL.md and .agents/skills/one/SKILL.md differ',
+    '.claude/skills/one/scripts/inventory.sh and .agents/skills/one/scripts/inventory.sh differ',
   ]);
 });
