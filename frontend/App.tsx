@@ -11,8 +11,20 @@ const ComponentSystemPage = lazy(async () => {
   return { default: module.ComponentSystemPage };
 });
 
+const DesignSystemsPage = lazy(async () => {
+  const module = await import('./pages/DesignSystemsPage.js');
+  return { default: module.DesignSystemsPage };
+});
+
 export function App({ healthClient = fetchHealth }: AppProps): React.JSX.Element {
   if (window.location.pathname === '/components') return <ComponentCatalogPage />;
+  if (window.location.pathname === '/design-systems') {
+    return (
+      <Suspense fallback={<p role="status">Loading design systems</p>}>
+        <DesignSystemsPage />
+      </Suspense>
+    );
+  }
   if (window.location.pathname.startsWith('/components/')) {
     return (
       <Suspense fallback={<p role="status">Loading components</p>}>
