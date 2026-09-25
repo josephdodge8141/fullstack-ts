@@ -138,9 +138,18 @@ export class DeliveryIdentityStack extends Stack {
     );
     preview.addToPolicy(
       new PolicyStatement({
-        actions: ['ecs:DescribeTasks', 'ecs:StopTask', 'ecs:ListTagsForResource'],
+        actions: ['ecs:DescribeTasks', 'ecs:StopTask'],
         resources: [
           `arn:${this.partition}:ecs:${this.region}:${this.account}:task/${config.applicationName}-preview/*`,
+        ],
+      }),
+    );
+    preview.addToPolicy(
+      new PolicyStatement({
+        actions: ['ecs:ListTagsForResource'],
+        resources: [
+          `arn:${this.partition}:ecs:${this.region}:${this.account}:task/${config.applicationName}-preview/*`,
+          `arn:${this.partition}:ecs:${this.region}:${this.account}:task-definition/preview-pr-*`,
         ],
       }),
     );

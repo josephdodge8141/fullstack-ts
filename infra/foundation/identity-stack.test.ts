@@ -27,4 +27,6 @@ test('factory.foundation.oidc-trust limits trust to exact repository environment
   assert.doesNotMatch(output, /repo:owner\/\*/);
   assert.match(output, /hostedzone\/Z12345/);
   assert.match(output, /example-app-preview-state/);
+  assert.match(output, /ecs:ListTaskDefinitions/);
+  assert.match(output, /task-definition\/preview-pr-\*/);
 });
