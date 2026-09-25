@@ -1,6 +1,6 @@
 # Twenty design-system briefs: conversation and delivery plan
 
-Status: **open creative brief**, 2026-09-25. This is the specification for developing twenty distinct experiences in a later conversation. It deliberately does not invent their names, audiences, or aesthetics. No preset CSS files exist yet.
+Status: **four introductory presets preview-ready, sixteen slots open**, 2026-09-25. This is the specification for developing twenty distinct experiences. DS-01 to DS-04 are deliberately basic starting points for the conversation, not approved briefs. Their executable tokens live in `frontend/design-system/themes/presets`, their brief metadata in `frontend/design-system/themes/registry.ts`, and the live preview at `/design-systems`.
 
 ## Purpose and boundaries
 
@@ -68,28 +68,35 @@ Only the **brief** carries subjective intent; CSS files carry executable values.
 
 ## Slot ledger
 
-| ID    | Working name | Experience description | Status |
-| ----- | ------------ | ---------------------- | ------ |
-| DS-01 | Open         | Open                   | Open   |
-| DS-02 | Open         | Open                   | Open   |
-| DS-03 | Open         | Open                   | Open   |
-| DS-04 | Open         | Open                   | Open   |
-| DS-05 | Open         | Open                   | Open   |
-| DS-06 | Open         | Open                   | Open   |
-| DS-07 | Open         | Open                   | Open   |
-| DS-08 | Open         | Open                   | Open   |
-| DS-09 | Open         | Open                   | Open   |
-| DS-10 | Open         | Open                   | Open   |
-| DS-11 | Open         | Open                   | Open   |
-| DS-12 | Open         | Open                   | Open   |
-| DS-13 | Open         | Open                   | Open   |
-| DS-14 | Open         | Open                   | Open   |
-| DS-15 | Open         | Open                   | Open   |
-| DS-16 | Open         | Open                   | Open   |
-| DS-17 | Open         | Open                   | Open   |
-| DS-18 | Open         | Open                   | Open   |
-| DS-19 | Open         | Open                   | Open   |
-| DS-20 | Open         | Open                   | Open   |
+| ID    | Working name | Experience description                                                      | Status        |
+| ----- | ------------ | --------------------------------------------------------------------------- | ------------- |
+| DS-01 | Foundation   | Quiet neutral baseline; Geist; standard motion                              | Preview-ready |
+| DS-02 | Harbor       | Crisp blue product workspace; IBM Plex; dense, tight radius                 | Preview-ready |
+| DS-03 | Hearth       | Warm editorial cream and terracotta; Fraunces and DM Sans; soft, slow       | Preview-ready |
+| DS-04 | Signal       | High-contrast technical console; JetBrains Mono; square, hard shadows, fast | Preview-ready |
+| DS-05 | Open         | Open                                                                        | Open          |
+| DS-06 | Open         | Open                                                                        | Open          |
+| DS-07 | Open         | Open                                                                        | Open          |
+| DS-08 | Open         | Open                                                                        | Open          |
+| DS-09 | Open         | Open                                                                        | Open          |
+| DS-10 | Open         | Open                                                                        | Open          |
+| DS-11 | Open         | Open                                                                        | Open          |
+| DS-12 | Open         | Open                                                                        | Open          |
+| DS-13 | Open         | Open                                                                        | Open          |
+| DS-14 | Open         | Open                                                                        | Open          |
+| DS-15 | Open         | Open                                                                        | Open          |
+| DS-16 | Open         | Open                                                                        | Open          |
+| DS-17 | Open         | Open                                                                        | Open          |
+| DS-18 | Open         | Open                                                                        | Open          |
+| DS-19 | Open         | Open                                                                        | Open          |
+| DS-20 | Open         | Open                                                                        | Open          |
+
+## Implementation notes
+
+- `frontend/design-system/themes/main.css` is the single Tailwind entry. It maps every contract token into `@theme inline`, remaps the fixed base set's hard-coded durations, zoom, backdrops and slider thumb onto tokens, and imports each preset file.
+- Preset colors for all selectable presets ship in the main stylesheet (small, and needed for flash-free restore). Non-default font families load lazily from `presets/*.fonts.css` only when their preset is active.
+- `frontend/design-system/themes/presets.test.ts` enforces brief/file parity, `main.css` imports and full token coverage. The `design-systems` Cucumber feature verifies selection, dark mode, persistence, corrupt and open-slot fallback, overlay inheritance, token resolution and motion in the browser.
+- Contrast evidence and WCAG measurements are not yet recorded for DS-01 to DS-04; they are required before any is marked approved.
 
 ## Cross-preset quality bar
 
