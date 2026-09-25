@@ -12,6 +12,17 @@
     "frontend/design-system/navigation.tsx",
     "frontend/design-system/page-patterns.tsx",
     "frontend/design-system/textarea-autosize.tsx",
+    "frontend/design-system/themes/main.css",
+    "frontend/design-system/themes/presets.test.ts",
+    "frontend/design-system/themes/presets/ds-01-foundation.css",
+    "frontend/design-system/themes/presets/ds-02-harbor.css",
+    "frontend/design-system/themes/presets/ds-02-harbor.fonts.css",
+    "frontend/design-system/themes/presets/ds-03-hearth.css",
+    "frontend/design-system/themes/presets/ds-03-hearth.fonts.css",
+    "frontend/design-system/themes/presets/ds-04-signal.css",
+    "frontend/design-system/themes/presets/ds-04-signal.fonts.css",
+    "frontend/design-system/themes/registry.ts",
+    "frontend/design-system/themes/theme.ts",
     "frontend/design-system/transfer-list.tsx",
     "frontend/design-system/tree-view.tsx",
     "frontend/design-system/typography.tsx"
@@ -48,6 +59,15 @@
     "textarea-autosize": ["TextareaAutosize"],
     "transfer-list": ["TransferList"],
     "tree-view": ["TreeView"],
-    "typography": ["Typography", "TextLink"]
+    "typography": ["Typography", "TextLink"],
+    "themes": [
+      "main.css",
+      "registry",
+      "theme",
+      "DS-01 Foundation",
+      "DS-02 Harbor",
+      "DS-03 Hearth",
+      "DS-04 Signal"
+    ]
   }
 }

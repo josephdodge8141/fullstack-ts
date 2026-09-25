@@ -1,9 +1,25 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="ds-01">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#f7f5ef" />
+    <script>
+      // Pre-paint preset and mode restore. main.tsx re-validates this with the Zod contract.
+      try {
+        var saved = JSON.parse(localStorage.getItem('design-system-preference') || 'null');
+        if (saved && /^ds-(0[1-9]|1[0-9]|20)$/.test(saved.preset)) {
+          document.documentElement.dataset.theme = saved.preset;
+        }
+        var dark =
+          saved &&
+          (saved.mode === 'dark' ||
+            (saved.mode === 'system' && matchMedia('(prefers-color-scheme: dark)').matches));
+        if (dark) document.documentElement.classList.add('dark');
+      } catch (error) {
+        document.documentElement.dataset.theme = 'ds-01';
+      }
+    </script>
     <title>Hello World · Preview starter</title>
   </head>
   <body>
