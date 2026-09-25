@@ -33,6 +33,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha }}
       - name: Build and package candidate images
         env:
           CANDIDATE_SHA: ${{ github.event.pull_request.head.sha }}
@@ -47,13 +48,12 @@ jobs:
       - name: Record exact candidate identity
         env:
           CANDIDATE_SHA: ${{ github.event.pull_request.head.sha }}
-          MERGE_SHA: ${{ github.sha }}
           REPOSITORY_ID: ${{ github.event.repository.id }}
           PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
           WORKFLOW_RUN_ID: ${{ github.run_id }}
           WORKFLOW_RUN_ATTEMPT: ${{ github.run_attempt }}
         run: |
-          jq -n --arg sha "$CANDIDATE_SHA" --arg mergeSha "$MERGE_SHA" --arg repositoryId "$REPOSITORY_ID" --argjson pullRequestNumber "$PULL_REQUEST_NUMBER" --arg runId "$WORKFLOW_RUN_ID" --argjson attempt "$WORKFLOW_RUN_ATTEMPT" '{sha:$sha,mergeSha:$mergeSha,repositoryId:$repositoryId,pullRequestNumber:$pullRequestNumber,runId:$runId,attempt:$attempt}' > admission.json
+          jq -n --arg sha "$CANDIDATE_SHA" --arg repositoryId "$REPOSITORY_ID" --argjson pullRequestNumber "$PULL_REQUEST_NUMBER" --arg runId "$WORKFLOW_RUN_ID" --argjson attempt "$WORKFLOW_RUN_ATTEMPT" '{sha:$sha,repositoryId:$repositoryId,pullRequestNumber:$pullRequestNumber,runId:$runId,attempt:$attempt}' > admission.json
           sha256sum admission.json compose-normalized.json backend-image.tar.gz frontend-image.tar.gz router-image.tar.gz > artifact-sha256.txt
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:

@@ -67,8 +67,9 @@ jobs:
         run: |
           cd candidate
           sha256sum --check artifact-sha256.txt
-          jq -e --arg sha "$CANDIDATE_SHA" --arg mergeSha "$RUN_HEAD_SHA" --arg repositoryId "$REPOSITORY_ID" --argjson pr "$PR_NUMBER" --arg runId "$RUN_ID" --argjson attempt "$ATTEMPT" '.sha == $sha and .mergeSha == $mergeSha and .repositoryId == $repositoryId and .pullRequestNumber == $pr and .runId == $runId and .attempt == $attempt' admission.json
+          jq -e --arg sha "$CANDIDATE_SHA" --arg repositoryId "$REPOSITORY_ID" --argjson pr "$PR_NUMBER" --arg runId "$RUN_ID" --argjson attempt "$ATTEMPT" '.sha == $sha and .repositoryId == $repositoryId and .pullRequestNumber == $pr and .runId == $runId and .attempt == $attempt' admission.json
           cd ..
+          test "$RUN_HEAD_SHA" = "$CANDIDATE_SHA"
           test "$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" --jq .head.sha)" = "$CANDIDATE_SHA"
           test "$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" --jq .state)" = open
           head_repo="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" --jq .head.repo.full_name)"
