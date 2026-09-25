@@ -41,14 +41,14 @@
   /* Boundaries, focus and selection */
   --border: oklch(0.25 0 0);
   --input: oklch(0.25 0 0);
-  --ring: oklch(0.65 0.2 130);
+  --ring: oklch(0.58 0.19 135);
   --selection: oklch(0.9 0.2 128);
   --selection-foreground: oklch(0.13 0 0);
 
   /* Data */
   --chart-1: oklch(0.6 0.2 130);
   --chart-2: oklch(0.6 0.15 250);
-  --chart-3: oklch(0.7 0.17 60);
+  --chart-3: oklch(0.6 0.17 55);
   --chart-4: oklch(0.55 0.22 330);
   --chart-5: oklch(0.5 0 0);
 
