@@ -8,6 +8,7 @@ import {
 } from 'aws-cdk-lib/aws-iam';
 import type { Construct } from 'constructs';
 import { z } from 'zod';
+import { frontendBucketName } from './application/config.js';
 
 const identityConfigSchema = z
   .object({
@@ -217,7 +218,7 @@ export class DeliveryIdentityStack extends Stack {
       );
       const buckets = [
         config.releaseArtifactBucketName,
-        `${config.applicationName}-${stage}-frontend-${this.account}-${this.region}`,
+        frontendBucketName(config.applicationName, stage, this.account, this.region),
       ];
       role.addToPolicy(
         new PolicyStatement({

@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { z } from 'zod';
 
 const applicationName = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
@@ -14,6 +15,16 @@ export const applicationConfigSchema = z
   .strict();
 
 export type ApplicationConfig = z.infer<typeof applicationConfigSchema>;
+
+export function frontendBucketName(
+  applicationName: string,
+  stage: 'dev' | 'prod',
+  account: string,
+  region: string,
+): string {
+  const digest = createHash('sha256').update(applicationName).digest('hex').slice(0, 12);
+  return `${applicationName.slice(0, 10)}-${stage}-fe-${digest}-${account}-${region}`;
+}
 
 export function parseApplicationConfig(value: unknown): ApplicationConfig {
   return applicationConfigSchema.parse(value);

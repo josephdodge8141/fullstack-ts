@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { App } from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
-import { exampleApplicationConfig, parseApplicationConfig } from './config.js';
+import { exampleApplicationConfig, frontendBucketName, parseApplicationConfig } from './config.js';
 import { ApplicationStack } from './stack.js';
 
 function template(stage: 'dev' | 'prod'): Template {
@@ -61,4 +61,24 @@ test('application deploy requires digest image and us-east-1 certificate', () =>
   ]) {
     assert.throws(() => parseApplicationConfig({ ...exampleApplicationConfig('dev'), ...bad }));
   }
+});
+
+test('frontend bucket names remain bounded and distinguish long project slugs', () => {
+  const account = '111111111111';
+  const region = 'ap-southeast-2';
+  const first = frontendBucketName(
+    'long-project-slug-with-a-unique-suffix-one',
+    'prod',
+    account,
+    region,
+  );
+  const second = frontendBucketName(
+    'long-project-slug-with-a-unique-suffix-two',
+    'prod',
+    account,
+    region,
+  );
+  assert.ok(first.length <= 63);
+  assert.match(first, /^[a-z0-9][a-z0-9-]*[a-z0-9]$/);
+  assert.notEqual(first, second);
 });

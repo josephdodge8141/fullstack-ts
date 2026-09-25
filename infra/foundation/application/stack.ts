@@ -17,7 +17,7 @@ import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { BlockPublicAccess, Bucket, BucketEncryption, type IBucket } from 'aws-cdk-lib/aws-s3';
 import type { Construct } from 'constructs';
 
-import { type ApplicationConfig, parseApplicationConfig } from './config.js';
+import { frontendBucketName, type ApplicationConfig, parseApplicationConfig } from './config.js';
 
 export interface ApplicationStackProps extends StackProps {
   readonly config: ApplicationConfig;
@@ -42,7 +42,12 @@ export class ApplicationStack extends Stack {
       removalPolicy: retention,
     });
     const frontendBucket = new Bucket(this, 'FrontendBucket', {
-      bucketName: `${prefix}-frontend-${this.account}-${this.region}`,
+      bucketName: frontendBucketName(
+        config.applicationName,
+        config.stage,
+        this.account,
+        this.region,
+      ),
       blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
       encryption: BucketEncryption.S3_MANAGED,
       enforceSSL: true,
