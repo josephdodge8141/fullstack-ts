@@ -406,9 +406,13 @@ export function DesignSystemsPage(): React.JSX.Element {
   const emailInvalid = !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email);
 
   const choosePreset = (preset: DesignSystemId): void =>
-    setPreference((previous) => ({ ...previous, preset }));
+    setPreference((previous) => {
+      const brief = designSystems.find((entry) => entry.id === preset);
+      if (previous.explicitMode || brief === undefined) return { ...previous, preset };
+      return { ...previous, preset, mode: brief.defaultMode };
+    });
   const chooseMode = (mode: ColorMode): void =>
-    setPreference((previous) => ({ ...previous, mode }));
+    setPreference((previous) => ({ ...previous, mode, explicitMode: true }));
 
   return (
     <Toaster>
@@ -490,7 +494,9 @@ export function DesignSystemsPage(): React.JSX.Element {
                           {selectable ? brief.name : 'Open slot'}
                         </span>
                         <span id={`${brief.id}-description`} className="block text-xs opacity-75">
-                          {selectable ? brief.keywords.join(' · ') : 'Not yet briefed'}
+                          {selectable
+                            ? `${brief.defaultMode === 'dark' ? 'Dark-first · ' : ''}${brief.keywords.join(' · ')}`
+                            : 'Not yet briefed'}
                         </span>
                       </span>
                     </label>

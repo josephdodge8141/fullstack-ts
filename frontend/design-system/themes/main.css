@@ -27,6 +27,22 @@
 @import './presets/ds-02-harbor.css';
 @import './presets/ds-03-hearth.css';
 @import './presets/ds-04-signal.css';
+@import './presets/ds-05-ledger.css';
+@import './presets/ds-06-clinic.css';
+@import './presets/ds-07-atlas.css';
+@import './presets/ds-08-pulse.css';
+@import './presets/ds-09-relay.css';
+@import './presets/ds-10-studio.css';
+@import './presets/ds-11-commons.css';
+@import './presets/ds-12-merchant.css';
+@import './presets/ds-13-folio.css';
+@import './presets/ds-14-aurora.css';
+@import './presets/ds-15-grove.css';
+@import './presets/ds-16-arcade.css';
+@import './presets/ds-17-noir.css';
+@import './presets/ds-18-riso.css';
+@import './presets/ds-19-blueprint.css';
+@import './presets/ds-20-brutal.css';
 
 @custom-variant dark (&:is(.dark *));
 

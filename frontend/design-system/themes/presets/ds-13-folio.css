@@ -1,0 +1,151 @@
+/*
+ * DS-13 Folio
+ * An editorial magazine page: grand serif headlines, ink on paper, hairline rules.
+ *
+ * This file is the editable source of truth for the preset. The light block defines every
+ * token; the dark block overrides colors and elevation.
+ * Fonts: Playfair Display, Source Serif 4 and IBM Plex Mono (SIL OFL 1.1, bundled through Fontsource).
+ */
+
+:root[data-theme='ds-13'] {
+  /* Canvas and surfaces */
+  --background: oklch(0.97 0.01 85);
+  --foreground: oklch(0.2 0.01 60);
+  --card: oklch(0.985 0.008 85);
+  --card-foreground: oklch(0.2 0.01 60);
+  --popover: oklch(0.99 0.006 85);
+  --popover-foreground: oklch(0.2 0.01 60);
+  --overlay: oklch(0.2 0.01 60 / 30%);
+
+  /* Actions */
+  --primary: oklch(0.2 0.01 60);
+  --primary-foreground: oklch(0.97 0.01 85);
+  --secondary: oklch(0.93 0.012 85);
+  --secondary-foreground: oklch(0.25 0.01 60);
+  --muted: oklch(0.94 0.01 85);
+  --muted-foreground: oklch(0.47 0.015 60);
+  --accent: oklch(0.93 0.04 25);
+  --accent-foreground: oklch(0.4 0.12 25);
+  --link: oklch(0.48 0.17 25);
+
+  /* Status */
+  --destructive: oklch(0.5 0.19 25);
+  --destructive-foreground: oklch(0.99 0 0);
+  --success: oklch(0.48 0.1 150);
+  --success-foreground: oklch(0.99 0 0);
+  --warning: oklch(0.8 0.13 80);
+  --warning-foreground: oklch(0.3 0.06 60);
+  --info: oklch(0.48 0.09 245);
+  --info-foreground: oklch(0.99 0 0);
+
+  /* Boundaries, focus and selection */
+  --border: oklch(0.85 0.012 85);
+  --input: oklch(0.8 0.015 85);
+  --ring: oklch(0.5 0.17 25);
+  --selection: oklch(0.88 0.06 25);
+  --selection-foreground: oklch(0.2 0.01 60);
+
+  /* Data */
+  --chart-1: oklch(0.2 0.01 60);
+  --chart-2: oklch(0.5 0.17 25);
+  --chart-3: oklch(0.5 0.08 245);
+  --chart-4: oklch(0.55 0.1 85);
+  --chart-5: oklch(0.5 0.1 150);
+
+  /* Navigation */
+  --sidebar: oklch(0.95 0.012 85);
+  --sidebar-foreground: oklch(0.2 0.01 60);
+  --sidebar-primary: oklch(0.2 0.01 60);
+  --sidebar-primary-foreground: oklch(0.97 0.01 85);
+  --sidebar-accent: oklch(0.91 0.014 85);
+  --sidebar-accent-foreground: oklch(0.2 0.01 60);
+  --sidebar-border: oklch(0.85 0.012 85);
+  --sidebar-ring: oklch(0.5 0.17 25);
+
+  /* Typography */
+  --type-display: 'Playfair Display Variable', ui-serif, Georgia, 'Times New Roman', serif;
+  --type-body: 'Source Serif 4 Variable', ui-serif, Georgia, 'Times New Roman', serif;
+  --type-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --type-display-weight: 700;
+  --type-display-tracking: -0.015em;
+  --type-body-tracking: 0em;
+  --type-body-leading: 1.65;
+
+  /* Shape, density and elevation */
+  --radius: 0.125rem;
+  --density: 1.04;
+  --elevation-xs: 0 0 #0000;
+  --elevation-sm: 0 0 0 1px oklch(0.2 0.01 60 / 14%);
+  --elevation-md: 0 0 0 1px oklch(0.2 0.01 60 / 14%), 0 2px 0 0 oklch(0.2 0.01 60 / 14%);
+  --elevation-lg: 0 0 0 1px oklch(0.2 0.01 60 / 14%), 0 4px 0 0 oklch(0.2 0.01 60 / 14%);
+  --elevation-xl: 0 0 0 1px oklch(0.2 0.01 60 / 14%), 0 6px 0 0 oklch(0.2 0.01 60 / 14%);
+
+  /* Motion */
+  --motion-duration-fast: 160ms;
+  --motion-duration-base: 260ms;
+  --motion-duration-slow: 460ms;
+  --motion-duration-overlay: 280ms;
+  --motion-ease-standard: cubic-bezier(0.45, 0, 0.55, 1);
+  --motion-ease-enter: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --motion-ease-exit: cubic-bezier(0.45, 0, 1, 1);
+  --motion-ease-emphasized: cubic-bezier(0.65, 0, 0.35, 1);
+  --motion-distance: 0.5rem;
+  --motion-scale: 0.99;
+  --motion-stagger: 70ms;
+}
+
+:root[data-theme='ds-13'].dark {
+  --background: oklch(0.17 0.008 60);
+  --foreground: oklch(0.92 0.012 85);
+  --card: oklch(0.2 0.009 60);
+  --card-foreground: oklch(0.92 0.012 85);
+  --popover: oklch(0.22 0.01 60);
+  --popover-foreground: oklch(0.92 0.012 85);
+  --overlay: oklch(0.04 0.005 60 / 65%);
+
+  --primary: oklch(0.92 0.012 85);
+  --primary-foreground: oklch(0.17 0.008 60);
+  --secondary: oklch(0.27 0.01 60);
+  --secondary-foreground: oklch(0.92 0.012 85);
+  --muted: oklch(0.24 0.01 60);
+  --muted-foreground: oklch(0.72 0.012 80);
+  --accent: oklch(0.3 0.05 25);
+  --accent-foreground: oklch(0.88 0.06 25);
+  --link: oklch(0.75 0.13 25);
+
+  --destructive: oklch(0.68 0.17 25);
+  --destructive-foreground: oklch(0.17 0.008 60);
+  --success: oklch(0.74 0.1 150);
+  --success-foreground: oklch(0.17 0.008 60);
+  --warning: oklch(0.83 0.12 82);
+  --warning-foreground: oklch(0.22 0.01 60);
+  --info: oklch(0.74 0.08 245);
+  --info-foreground: oklch(0.17 0.008 60);
+
+  --border: oklch(0.92 0.012 85 / 14%);
+  --input: oklch(0.92 0.012 85 / 18%);
+  --ring: oklch(0.7 0.16 25);
+  --selection: oklch(0.4 0.08 25);
+  --selection-foreground: oklch(0.96 0.01 85);
+
+  --chart-1: oklch(0.92 0.012 85);
+  --chart-2: oklch(0.7 0.16 25);
+  --chart-3: oklch(0.72 0.08 245);
+  --chart-4: oklch(0.8 0.11 85);
+  --chart-5: oklch(0.72 0.1 150);
+
+  --sidebar: oklch(0.15 0.008 60);
+  --sidebar-foreground: oklch(0.92 0.012 85);
+  --sidebar-primary: oklch(0.92 0.012 85);
+  --sidebar-primary-foreground: oklch(0.17 0.008 60);
+  --sidebar-accent: oklch(0.25 0.01 60);
+  --sidebar-accent-foreground: oklch(0.92 0.012 85);
+  --sidebar-border: oklch(0.92 0.012 85 / 14%);
+  --sidebar-ring: oklch(0.7 0.16 25);
+
+  --elevation-xs: 0 0 #0000;
+  --elevation-sm: 0 0 0 1px oklch(0.92 0.012 85 / 14%);
+  --elevation-md: 0 0 0 1px oklch(0.92 0.012 85 / 14%), 0 2px 0 0 oklch(0.92 0.012 85 / 14%);
+  --elevation-lg: 0 0 0 1px oklch(0.92 0.012 85 / 14%), 0 4px 0 0 oklch(0.92 0.012 85 / 14%);
+  --elevation-xl: 0 0 0 1px oklch(0.92 0.012 85 / 14%), 0 6px 0 0 oklch(0.92 0.012 85 / 14%);
+}

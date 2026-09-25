@@ -1,0 +1,154 @@
+/*
+ * DS-16 Arcade
+ * A playful pastel consumer app with pillowy shapes and springy motion.
+ *
+ * This file is the editable source of truth for the preset. The light block defines every
+ * token; the dark block overrides colors and elevation.
+ * Fonts: Fredoka, Quicksand and Fira Code (SIL OFL 1.1, bundled through Fontsource).
+ */
+
+:root[data-theme='ds-16'] {
+  /* Canvas and surfaces */
+  --background: oklch(0.985 0.012 330);
+  --foreground: oklch(0.28 0.06 300);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.28 0.06 300);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.28 0.06 300);
+  --overlay: oklch(0.3 0.08 310 / 25%);
+
+  /* Actions */
+  --primary: oklch(0.52 0.2 335);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.94 0.05 200);
+  --secondary-foreground: oklch(0.33 0.08 230);
+  --muted: oklch(0.96 0.02 320);
+  --muted-foreground: oklch(0.5 0.06 300);
+  --accent: oklch(0.95 0.07 110);
+  --accent-foreground: oklch(0.38 0.09 130);
+  --link: oklch(0.5 0.2 320);
+
+  /* Status */
+  --destructive: oklch(0.54 0.21 20);
+  --destructive-foreground: oklch(0.99 0 0);
+  --success: oklch(0.52 0.13 155);
+  --success-foreground: oklch(0.99 0 0);
+  --warning: oklch(0.82 0.14 80);
+  --warning-foreground: oklch(0.32 0.07 55);
+  --info: oklch(0.52 0.13 245);
+  --info-foreground: oklch(0.99 0 0);
+
+  /* Boundaries, focus and selection */
+  --border: oklch(0.9 0.03 320);
+  --input: oklch(0.86 0.04 320);
+  --ring: oklch(0.52 0.2 335);
+  --selection: oklch(0.9 0.08 330);
+  --selection-foreground: oklch(0.28 0.06 300);
+
+  /* Data */
+  --chart-1: oklch(0.52 0.2 335);
+  --chart-2: oklch(0.54 0.13 230);
+  --chart-3: oklch(0.58 0.14 60);
+  --chart-4: oklch(0.52 0.15 160);
+  --chart-5: oklch(0.52 0.18 290);
+
+  /* Navigation */
+  --sidebar: oklch(0.97 0.02 320);
+  --sidebar-foreground: oklch(0.28 0.06 300);
+  --sidebar-primary: oklch(0.52 0.2 335);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(0.93 0.05 330);
+  --sidebar-accent-foreground: oklch(0.35 0.15 335);
+  --sidebar-border: oklch(0.9 0.03 320);
+  --sidebar-ring: oklch(0.52 0.2 335);
+
+  /* Typography */
+  --type-display: 'Fredoka Variable', ui-sans-serif, system-ui, sans-serif;
+  --type-body: 'Quicksand Variable', ui-sans-serif, system-ui, sans-serif;
+  --type-mono: 'Fira Code Variable', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --type-display-weight: 600;
+  --type-display-tracking: -0.01em;
+  --type-body-tracking: 0.01em;
+  --type-body-leading: 1.6;
+
+  /* Shape, density and elevation */
+  --radius: 1.5rem;
+  --density: 1.05;
+  --elevation-xs: 0 1px 2px 0 oklch(0.5 0.15 330 / 7%);
+  --elevation-sm: 0 2px 6px -1px oklch(0.5 0.15 330 / 12%), 0 1px 2px 0 oklch(0.5 0.15 330 / 7%);
+  --elevation-md:
+    0 8px 20px -6px oklch(0.5 0.15 330 / 18%), 0 2px 6px -2px oklch(0.5 0.15 330 / 8%);
+  --elevation-lg:
+    0 18px 36px -12px oklch(0.5 0.15 330 / 24%), 0 4px 10px -4px oklch(0.5 0.15 330 / 8%);
+  --elevation-xl:
+    0 32px 64px -20px oklch(0.5 0.15 330 / 32%), 0 8px 16px -8px oklch(0.5 0.15 330 / 12%);
+
+  /* Motion */
+  --motion-duration-fast: 140ms;
+  --motion-duration-base: 240ms;
+  --motion-duration-slow: 420ms;
+  --motion-duration-overlay: 280ms;
+  --motion-ease-standard: cubic-bezier(0.34, 1.2, 0.64, 1);
+  --motion-ease-enter: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --motion-ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --motion-ease-emphasized: cubic-bezier(0.68, -0.4, 0.27, 1.4);
+  --motion-distance: 1rem;
+  --motion-scale: 0.88;
+  --motion-stagger: 70ms;
+}
+
+:root[data-theme='ds-16'].dark {
+  --background: oklch(0.21 0.04 300);
+  --foreground: oklch(0.95 0.02 330);
+  --card: oklch(0.25 0.05 300);
+  --card-foreground: oklch(0.95 0.02 330);
+  --popover: oklch(0.28 0.055 300);
+  --popover-foreground: oklch(0.95 0.02 330);
+  --overlay: oklch(0.08 0.03 300 / 60%);
+
+  --primary: oklch(0.78 0.15 340);
+  --primary-foreground: oklch(0.2 0.04 300);
+  --secondary: oklch(0.32 0.06 230);
+  --secondary-foreground: oklch(0.95 0.02 330);
+  --muted: oklch(0.28 0.05 300);
+  --muted-foreground: oklch(0.76 0.05 320);
+  --accent: oklch(0.34 0.07 130);
+  --accent-foreground: oklch(0.9 0.1 120);
+  --link: oklch(0.82 0.12 340);
+
+  --destructive: oklch(0.72 0.18 20);
+  --destructive-foreground: oklch(0.2 0.04 300);
+  --success: oklch(0.8 0.14 155);
+  --success-foreground: oklch(0.2 0.04 300);
+  --warning: oklch(0.86 0.13 85);
+  --warning-foreground: oklch(0.25 0.05 60);
+  --info: oklch(0.78 0.11 240);
+  --info-foreground: oklch(0.2 0.04 300);
+
+  --border: oklch(1 0 0 / 11%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.78 0.15 340);
+  --selection: oklch(0.45 0.12 335);
+  --selection-foreground: oklch(0.98 0.01 330);
+
+  --chart-1: oklch(0.78 0.15 340);
+  --chart-2: oklch(0.76 0.11 230);
+  --chart-3: oklch(0.82 0.13 70);
+  --chart-4: oklch(0.78 0.14 160);
+  --chart-5: oklch(0.74 0.15 290);
+
+  --sidebar: oklch(0.18 0.04 300);
+  --sidebar-foreground: oklch(0.95 0.02 330);
+  --sidebar-primary: oklch(0.78 0.15 340);
+  --sidebar-primary-foreground: oklch(0.2 0.04 300);
+  --sidebar-accent: oklch(0.3 0.06 310);
+  --sidebar-accent-foreground: oklch(0.95 0.02 330);
+  --sidebar-border: oklch(1 0 0 / 11%);
+  --sidebar-ring: oklch(0.78 0.15 340);
+
+  --elevation-xs: 0 1px 2px 0 oklch(0 0 0 / 24%);
+  --elevation-sm: 0 2px 6px -1px oklch(0 0 0 / 40%), 0 1px 2px 0 oklch(0 0 0 / 24%);
+  --elevation-md: 0 8px 20px -6px oklch(0 0 0 / 60%), 0 2px 6px -2px oklch(0 0 0 / 28%);
+  --elevation-lg: 0 18px 36px -12px oklch(0 0 0 / 80%), 0 4px 10px -4px oklch(0 0 0 / 28%);
+  --elevation-xl: 0 32px 64px -20px oklch(0 0 0 / 108%), 0 8px 16px -8px oklch(0 0 0 / 40%);
+}
