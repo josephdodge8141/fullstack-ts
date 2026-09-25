@@ -4,6 +4,7 @@ import test from 'node:test';
 import {
   browserCaptureRegistrySchema,
   browserReportSchema,
+  designSystemPreferenceSchema,
   errorResponseSchema,
   healthResponseSchema,
 } from '../index.js';
@@ -77,6 +78,25 @@ test('trusted browser captures bind immutable evidence metadata to one execution
       schemaVersion: 1,
       captures: [{ ...parsed.captures[0], content: 'actual observation stays outside metadata' }],
     }).success,
+    false,
+  );
+});
+
+test('design system preferences accept only known slots and color modes', () => {
+  assert.deepEqual(designSystemPreferenceSchema.parse({ preset: 'ds-04', mode: 'system' }), {
+    preset: 'ds-04',
+    mode: 'system',
+  });
+  assert.equal(
+    designSystemPreferenceSchema.safeParse({ preset: 'ds-21', mode: 'dark' }).success,
+    false,
+  );
+  assert.equal(
+    designSystemPreferenceSchema.safeParse({ preset: 'ds-01', mode: 'sepia' }).success,
+    false,
+  );
+  assert.equal(
+    designSystemPreferenceSchema.safeParse({ preset: 'ds-01', mode: 'dark', extra: true }).success,
     false,
   );
 });

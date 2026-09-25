@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { After, Before, Given, Then, When, setWorldConstructor, World } from '@cucumber/cucumber';
 import { chromium, expect, type Browser, type BrowserContext, type Page } from '@playwright/test';
 
+import { designSystems, requiredTokens, selectableIds } from '../design-system/themes/registry.js';
+
 const baseUrl = process.env.COMPOSE_BASE_URL ?? 'http://app.localhost:8088';
 
 class FrontendWorld extends World {
@@ -193,3 +195,241 @@ Then('the response status is {int}', function (this: FrontendWorld, status: numb
 Then('the response body is exactly:', function (this: FrontendWorld, expected: string) {
   assert.deepEqual(this.responseBody, JSON.parse(expected));
 });
+
+const preferenceKey = 'design-system-preference';
+
+function presetId(name: string): string {
+  const brief = designSystems.find((candidate) => candidate.name === name);
+  assert.ok(brief !== undefined, `Unknown design system ${name}`);
+  return brief.id;
+}
+
+async function tokenUnderPreset(page: Page, token: string, preset: string): Promise<string[]> {
+  return page.evaluate(
+    ({ token, preset }) => {
+      const root = document.documentElement;
+      const current = root.dataset.theme ?? '';
+      const selected = getComputedStyle(root).getPropertyValue(`--${token}`).trim();
+      root.dataset.theme = preset;
+      const other = getComputedStyle(root).getPropertyValue(`--${token}`).trim();
+      root.dataset.theme = current;
+      return [selected, other];
+    },
+    { token, preset },
+  );
+}
+
+When('I open the design system gallery', async function (this: FrontendWorld) {
+  await this.currentPage().goto('/design-systems');
+});
+
+Given('the saved design system preference is corrupt', async function (this: FrontendWorld) {
+  await this.currentPage().addInitScript((key) => {
+    window.localStorage.setItem(key, '{"preset":');
+  }, preferenceKey);
+});
+
+Given(
+  'the saved design system preference names an open slot',
+  async function (this: FrontendWorld) {
+    await this.currentPage().addInitScript((key) => {
+      window.localStorage.setItem(key, JSON.stringify({ preset: 'ds-12', mode: 'light' }));
+    }, preferenceKey);
+  },
+);
+
+Then('the design system picker lists every preset slot', async function (this: FrontendWorld) {
+  const picker = this.currentPage().getByRole('radiogroup', { name: 'Design system' });
+  await expect(picker.getByRole('radio')).toHaveCount(designSystems.length);
+});
+
+Then(
+  'the gallery shows foundations actions inputs navigation overlays data and motion',
+  async function (this: FrontendWorld) {
+    for (const name of [
+      'Foundations',
+      'Actions',
+      'Inputs',
+      'Navigation',
+      'Overlays',
+      'Data display',
+      'Motion',
+    ]) {
+      await expect(
+        this.currentPage().getByRole('heading', { name, exact: true, level: 2 }),
+      ).toBeVisible();
+    }
+  },
+);
+
+When('I choose the {string} design system', async function (this: FrontendWorld, name: string) {
+  await this.currentPage()
+    .getByRole('radiogroup', { name: 'Design system' })
+    .getByRole('radio', { name, exact: true })
+    .check();
+});
+
+When('I choose the dark color mode', async function (this: FrontendWorld) {
+  await this.currentPage()
+    .getByRole('radiogroup', { name: 'Color mode' })
+    .getByRole('radio', { name: 'Dark', exact: true })
+    .check();
+});
+
+When('I reload the page', async function (this: FrontendWorld) {
+  await this.currentPage().reload();
+});
+
+Then('the document uses the {string} preset', async function (this: FrontendWorld, id: string) {
+  await expect(this.currentPage().locator('html')).toHaveAttribute('data-theme', id);
+});
+
+Then('the document is in dark mode', async function (this: FrontendWorld) {
+  await expect(this.currentPage().locator('html')).toHaveClass(/(^|\s)dark(\s|$)/);
+});
+
+Then('the document is in light mode', async function (this: FrontendWorld) {
+  await expect(this.currentPage().locator('html')).not.toHaveClass(/(^|\s)dark(\s|$)/);
+});
+
+Then(
+  'the primary action color differs from the {string} preset',
+  async function (this: FrontendWorld, name: string) {
+    const [selected, other] = await tokenUnderPreset(this.currentPage(), 'primary', presetId(name));
+    assert.ok(selected !== undefined && selected !== '');
+    assert.notEqual(selected, other);
+  },
+);
+
+Then(
+  'the heading font differs from the {string} preset',
+  async function (this: FrontendWorld, name: string) {
+    const heading = this.currentPage().getByRole('heading', { name: 'Design systems', level: 1 });
+    const [selected, other] = await heading.evaluate((element, preset) => {
+      const root = document.documentElement;
+      const current = root.dataset.theme ?? '';
+      const selectedFont = getComputedStyle(element).fontFamily;
+      root.dataset.theme = preset;
+      const otherFont = getComputedStyle(element).fontFamily;
+      root.dataset.theme = current;
+      return [selectedFont, otherFont];
+    }, presetId(name));
+    assert.notEqual(selected, other);
+  },
+);
+
+When('I open the preset example dialog', async function (this: FrontendWorld) {
+  await this.currentPage().getByRole('button', { name: 'Open preset dialog' }).click();
+});
+
+Then(
+  'the example dialog surface uses the preset popover color',
+  async function (this: FrontendWorld) {
+    const dialog = this.currentPage().getByRole('dialog', { name: 'Preset dialog' });
+    await expect(dialog).toBeVisible();
+    const [surface, expected, foundation] = await dialog.evaluate((element) => {
+      const probe = document.createElement('div');
+      probe.style.backgroundColor = 'var(--popover)';
+      document.body.append(probe);
+      const selected = getComputedStyle(probe).backgroundColor;
+      const root = document.documentElement;
+      const current = root.dataset.theme ?? '';
+      root.dataset.theme = 'ds-01';
+      const baseline = getComputedStyle(probe).backgroundColor;
+      root.dataset.theme = current;
+      probe.remove();
+      return [getComputedStyle(element).backgroundColor, selected, baseline];
+    });
+    assert.equal(surface, expected);
+    assert.notEqual(surface, foundation);
+  },
+);
+
+Then('the page background differs from light mode', async function (this: FrontendWorld) {
+  const [dark, light] = await this.currentPage().evaluate(() => {
+    const root = document.documentElement;
+    const darkValue = getComputedStyle(document.body).backgroundColor;
+    root.classList.remove('dark');
+    const lightValue = getComputedStyle(document.body).backgroundColor;
+    root.classList.add('dark');
+    return [darkValue, lightValue];
+  });
+  assert.notEqual(dark, light);
+});
+
+Then('the open preset slots cannot be chosen', async function (this: FrontendWorld) {
+  const picker = this.currentPage().getByRole('radiogroup', { name: 'Design system' });
+  const openSlots = designSystems.filter((brief) => brief.status === 'open');
+  assert.ok(openSlots.length > 0);
+  for (const brief of openSlots) {
+    await expect(picker.getByRole('radio', { name: brief.name, exact: true })).toBeDisabled();
+  }
+});
+
+Then(
+  'every ready preset resolves every required token in light and dark mode',
+  async function (this: FrontendWorld) {
+    const missing = await this.currentPage().evaluate(
+      ({ ids, tokens }) => {
+        const root = document.documentElement;
+        const initialTheme = root.dataset.theme ?? '';
+        const initialDark = root.classList.contains('dark');
+        const gaps: string[] = [];
+        for (const id of ids) {
+          for (const dark of [false, true]) {
+            root.dataset.theme = id;
+            root.classList.toggle('dark', dark);
+            const style = getComputedStyle(root);
+            for (const token of tokens) {
+              if (style.getPropertyValue(`--${token}`).trim() === '') {
+                gaps.push(`${id} ${dark ? 'dark' : 'light'} --${token}`);
+              }
+            }
+          }
+        }
+        root.dataset.theme = initialTheme;
+        root.classList.toggle('dark', initialDark);
+        return gaps;
+      },
+      { ids: [...selectableIds()], tokens: [...requiredTokens] },
+    );
+    assert.deepEqual(missing, []);
+  },
+);
+
+Then('the motion example uses the preset base duration', async function (this: FrontendWorld) {
+  const example = this.currentPage().getByRole('button', { name: 'Motion example' });
+  const [actual, expected, foundation] = await example.evaluate((element) => {
+    const probe = document.createElement('div');
+    probe.style.transitionDuration = 'var(--motion-duration-base)';
+    document.body.append(probe);
+    const selected = getComputedStyle(probe).transitionDuration;
+    const root = document.documentElement;
+    const current = root.dataset.theme ?? '';
+    root.dataset.theme = 'ds-01';
+    const baseline = getComputedStyle(probe).transitionDuration;
+    root.dataset.theme = current;
+    probe.remove();
+    return [getComputedStyle(element).transitionDuration.split(',')[0]?.trim(), selected, baseline];
+  });
+  assert.equal(actual, expected);
+  assert.notEqual(expected, foundation);
+});
+
+When(
+  'I request reduced motion and open the design system gallery',
+  async function (this: FrontendWorld) {
+    await this.currentPage().emulateMedia({ reducedMotion: 'reduce' });
+    await this.currentPage().goto('/design-systems');
+  },
+);
+
+Then(
+  'the motion example has an effectively instant transition',
+  async function (this: FrontendWorld) {
+    const duration = await this.currentPage()
+      .getByRole('button', { name: 'Motion example' })
+      .evaluate((element) => getComputedStyle(element).transitionDuration);
+    assert.match(duration, /0\.00001s|1e-05s|0s/);
+  },
+);
