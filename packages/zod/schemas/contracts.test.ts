@@ -86,7 +86,13 @@ test('design system preferences accept only known slots and color modes', () => 
   assert.deepEqual(designSystemPreferenceSchema.parse({ preset: 'ds-04', mode: 'system' }), {
     preset: 'ds-04',
     mode: 'system',
+    explicitMode: false,
   });
+  assert.equal(
+    designSystemPreferenceSchema.parse({ preset: 'ds-08', mode: 'dark', explicitMode: true })
+      .explicitMode,
+    true,
+  );
   assert.equal(
     designSystemPreferenceSchema.safeParse({ preset: 'ds-21', mode: 'dark' }).success,
     false,

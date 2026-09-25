@@ -99,19 +99,38 @@ test('the token check rejects a preset with a missing token', () => {
   ]);
 });
 
-test('saved preferences recover to the default when corrupt, unknown or open', () => {
+test('saved preferences recover to the default when corrupt or unknown', () => {
+  const fallback = { preset: 'ds-01', mode: 'light', explicitMode: false };
   const storage = new MemoryStorage();
-  assert.deepEqual(readDesignSystemPreference(storage), { preset: 'ds-01', mode: 'light' });
+  assert.deepEqual(readDesignSystemPreference(storage), fallback);
 
   storage.setItem(designSystemPreferenceKey, '{"preset":');
-  assert.deepEqual(readDesignSystemPreference(storage), { preset: 'ds-01', mode: 'light' });
+  assert.deepEqual(readDesignSystemPreference(storage), fallback);
 
   storage.setItem(designSystemPreferenceKey, JSON.stringify({ preset: 'ds-99', mode: 'dark' }));
-  assert.deepEqual(readDesignSystemPreference(storage), { preset: 'ds-01', mode: 'light' });
-
-  storage.setItem(designSystemPreferenceKey, JSON.stringify({ preset: 'ds-12', mode: 'dark' }));
-  assert.deepEqual(readDesignSystemPreference(storage), { preset: 'ds-01', mode: 'dark' });
+  assert.deepEqual(readDesignSystemPreference(storage), fallback);
 
   storage.setItem(designSystemPreferenceKey, JSON.stringify({ preset: 'ds-03', mode: 'system' }));
-  assert.deepEqual(readDesignSystemPreference(storage), { preset: 'ds-03', mode: 'system' });
+  assert.deepEqual(readDesignSystemPreference(storage), {
+    preset: 'ds-03',
+    mode: 'system',
+    explicitMode: false,
+  });
+
+  storage.setItem(
+    designSystemPreferenceKey,
+    JSON.stringify({ preset: 'ds-08', mode: 'light', explicitMode: true }),
+  );
+  assert.deepEqual(readDesignSystemPreference(storage), {
+    preset: 'ds-08',
+    mode: 'light',
+    explicitMode: true,
+  });
+});
+
+test('exactly five presets are dark-first', () => {
+  assert.deepEqual(
+    designSystems.filter((brief) => brief.defaultMode === 'dark').map((brief) => brief.name),
+    ['Pulse', 'Relay', 'Studio', 'Aurora', 'Noir'],
+  );
 });

@@ -58,14 +58,36 @@ Feature: Design system presets
     Then the document uses the "ds-01" preset
     And the document is in light mode
 
-  @id:design-systems.open-slot @backend-noop
-  Scenario: Keep unfinished preset slots unselectable
-    backend-noop: Slot availability is local registry state without backend data.
+  @id:design-systems.unknown-preset @backend-noop
+  Scenario: Recover from a saved preference naming an unknown preset
+    backend-noop: Preference parsing happens in the browser without backend data.
     Given I am not signed in
-    And the saved design system preference names an open slot
+    And the saved design system preference names an unknown preset
     When I open the design system gallery
-    Then the open preset slots cannot be chosen
+    Then every preset slot can be chosen
     And the document uses the "ds-01" preset
+
+  @id:design-systems.dark-first @backend-noop
+  Scenario: Open a dark-first preset in dark mode
+    backend-noop: Preset default mode is browser presentation state without backend data.
+    Given I am not signed in
+    When I open the design system gallery
+    And I choose the "Pulse" design system
+    Then the document uses the "ds-08" preset
+    And the document is in dark mode
+    When I choose the "Ledger" design system
+    Then the document is in light mode
+
+  @id:design-systems.explicit-mode @backend-noop
+  Scenario: Keep an explicitly chosen mode when switching to a dark-first preset
+    backend-noop: Color mode preference is browser presentation state without backend data.
+    Given I am not signed in
+    When I open the design system gallery
+    And I choose the dark color mode
+    And I choose the light color mode
+    And I choose the "Noir" design system
+    Then the document uses the "ds-17" preset
+    And the document is in light mode
 
   @id:design-systems.tokens @backend-noop
   Scenario: Resolve the full token contract for every ready preset

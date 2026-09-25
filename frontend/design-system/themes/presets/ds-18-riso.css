@@ -1,0 +1,151 @@
+/*
+ * DS-18 Riso
+ * Risograph print: blue and fluorescent pink inks on warm newsprint.
+ *
+ * This file is the editable source of truth for the preset. The light block defines every
+ * token; the dark block overrides colors and elevation.
+ * Fonts: Bricolage Grotesque, Work Sans and Space Mono (SIL OFL 1.1, bundled through Fontsource).
+ */
+
+:root[data-theme='ds-18'] {
+  /* Canvas and surfaces */
+  --background: oklch(0.95 0.015 90);
+  --foreground: oklch(0.28 0.12 265);
+  --card: oklch(0.97 0.012 90);
+  --card-foreground: oklch(0.28 0.12 265);
+  --popover: oklch(0.98 0.01 90);
+  --popover-foreground: oklch(0.28 0.12 265);
+  --overlay: oklch(0.28 0.12 265 / 25%);
+
+  /* Actions */
+  --primary: oklch(0.4 0.17 265);
+  --primary-foreground: oklch(0.96 0.03 355);
+  --secondary: oklch(0.9 0.05 355);
+  --secondary-foreground: oklch(0.3 0.12 265);
+  --muted: oklch(0.92 0.015 90);
+  --muted-foreground: oklch(0.45 0.07 265);
+  --accent: oklch(0.75 0.18 355);
+  --accent-foreground: oklch(0.25 0.12 265);
+  --link: oklch(0.4 0.17 265);
+
+  /* Status */
+  --destructive: oklch(0.52 0.22 25);
+  --destructive-foreground: oklch(0.99 0 0);
+  --success: oklch(0.5 0.13 160);
+  --success-foreground: oklch(0.99 0 0);
+  --warning: oklch(0.82 0.15 90);
+  --warning-foreground: oklch(0.3 0.1 265);
+  --info: oklch(0.45 0.15 250);
+  --info-foreground: oklch(0.99 0 0);
+
+  /* Boundaries, focus and selection */
+  --border: oklch(0.3 0.12 265 / 35%);
+  --input: oklch(0.3 0.12 265 / 45%);
+  --ring: oklch(0.55 0.23 358);
+  --selection: oklch(0.75 0.18 355);
+  --selection-foreground: oklch(0.25 0.12 265);
+
+  /* Data */
+  --chart-1: oklch(0.4 0.17 265);
+  --chart-2: oklch(0.55 0.23 358);
+  --chart-3: oklch(0.55 0.12 200);
+  --chart-4: oklch(0.58 0.14 60);
+  --chart-5: oklch(0.45 0.12 300);
+
+  /* Navigation */
+  --sidebar: oklch(0.92 0.02 90);
+  --sidebar-foreground: oklch(0.28 0.12 265);
+  --sidebar-primary: oklch(0.4 0.17 265);
+  --sidebar-primary-foreground: oklch(0.96 0.03 355);
+  --sidebar-accent: oklch(0.88 0.06 355);
+  --sidebar-accent-foreground: oklch(0.28 0.12 265);
+  --sidebar-border: oklch(0.3 0.12 265 / 35%);
+  --sidebar-ring: oklch(0.55 0.23 358);
+
+  /* Typography */
+  --type-display: 'Bricolage Grotesque Variable', ui-sans-serif, system-ui, sans-serif;
+  --type-body: 'Work Sans Variable', ui-sans-serif, system-ui, sans-serif;
+  --type-mono: 'Space Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --type-display-weight: 800;
+  --type-display-tracking: -0.035em;
+  --type-body-tracking: 0em;
+  --type-body-leading: 1.5;
+
+  /* Shape, density and elevation */
+  --radius: 0.25rem;
+  --density: 1;
+  --elevation-xs: 0 0 #0000;
+  --elevation-sm: 2px 2px 0 0 oklch(0.75 0.18 355);
+  --elevation-md: 3px 3px 0 0 oklch(0.75 0.18 355);
+  --elevation-lg: 5px 5px 0 0 oklch(0.75 0.18 355);
+  --elevation-xl: 8px 8px 0 0 oklch(0.75 0.18 355);
+
+  /* Motion */
+  --motion-duration-fast: 90ms;
+  --motion-duration-base: 140ms;
+  --motion-duration-slow: 240ms;
+  --motion-duration-overlay: 150ms;
+  --motion-ease-standard: cubic-bezier(0.3, 0, 0.3, 1);
+  --motion-ease-enter: cubic-bezier(0.2, 1.4, 0.4, 1);
+  --motion-ease-exit: cubic-bezier(0.6, 0, 1, 1);
+  --motion-ease-emphasized: steps(4, jump-end);
+  --motion-distance: 0.5rem;
+  --motion-scale: 0.94;
+  --motion-stagger: 40ms;
+}
+
+:root[data-theme='ds-18'].dark {
+  --background: oklch(0.2 0.05 265);
+  --foreground: oklch(0.94 0.02 90);
+  --card: oklch(0.24 0.06 265);
+  --card-foreground: oklch(0.94 0.02 90);
+  --popover: oklch(0.27 0.065 265);
+  --popover-foreground: oklch(0.94 0.02 90);
+  --overlay: oklch(0.05 0.03 265 / 60%);
+
+  --primary: oklch(0.78 0.17 355);
+  --primary-foreground: oklch(0.2 0.05 265);
+  --secondary: oklch(0.3 0.07 265);
+  --secondary-foreground: oklch(0.94 0.02 90);
+  --muted: oklch(0.27 0.06 265);
+  --muted-foreground: oklch(0.76 0.04 265);
+  --accent: oklch(0.38 0.12 265);
+  --accent-foreground: oklch(0.93 0.04 355);
+  --link: oklch(0.82 0.13 355);
+
+  --destructive: oklch(0.7 0.19 25);
+  --destructive-foreground: oklch(0.2 0.05 265);
+  --success: oklch(0.78 0.14 160);
+  --success-foreground: oklch(0.2 0.05 265);
+  --warning: oklch(0.86 0.14 90);
+  --warning-foreground: oklch(0.22 0.05 265);
+  --info: oklch(0.78 0.1 240);
+  --info-foreground: oklch(0.2 0.05 265);
+
+  --border: oklch(0.78 0.17 355 / 25%);
+  --input: oklch(0.78 0.17 355 / 32%);
+  --ring: oklch(0.78 0.17 355);
+  --selection: oklch(0.78 0.17 355);
+  --selection-foreground: oklch(0.2 0.05 265);
+
+  --chart-1: oklch(0.78 0.17 355);
+  --chart-2: oklch(0.75 0.12 240);
+  --chart-3: oklch(0.8 0.12 200);
+  --chart-4: oklch(0.85 0.13 90);
+  --chart-5: oklch(0.72 0.12 300);
+
+  --sidebar: oklch(0.17 0.05 265);
+  --sidebar-foreground: oklch(0.94 0.02 90);
+  --sidebar-primary: oklch(0.78 0.17 355);
+  --sidebar-primary-foreground: oklch(0.2 0.05 265);
+  --sidebar-accent: oklch(0.3 0.08 265);
+  --sidebar-accent-foreground: oklch(0.94 0.02 90);
+  --sidebar-border: oklch(0.78 0.17 355 / 25%);
+  --sidebar-ring: oklch(0.78 0.17 355);
+
+  --elevation-xs: 0 0 #0000;
+  --elevation-sm: 2px 2px 0 0 oklch(0.78 0.17 355 / 45%);
+  --elevation-md: 3px 3px 0 0 oklch(0.78 0.17 355 / 45%);
+  --elevation-lg: 5px 5px 0 0 oklch(0.78 0.17 355 / 45%);
+  --elevation-xl: 8px 8px 0 0 oklch(0.78 0.17 355 / 45%);
+}

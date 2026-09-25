@@ -1,0 +1,4 @@
+/* DS-16 Arcade fonts, loaded only when the preset is active. */
+@import '@fontsource-variable/fredoka';
+@import '@fontsource-variable/quicksand';
+@import '@fontsource-variable/fira-code';

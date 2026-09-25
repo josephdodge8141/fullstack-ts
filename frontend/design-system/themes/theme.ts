@@ -13,6 +13,22 @@ const fontLoaders: Readonly<Partial<Record<DesignSystemId, () => Promise<unknown
   'ds-02': () => import('./presets/ds-02-harbor.fonts.css'),
   'ds-03': () => import('./presets/ds-03-hearth.fonts.css'),
   'ds-04': () => import('./presets/ds-04-signal.fonts.css'),
+  'ds-05': () => import('./presets/ds-05-ledger.fonts.css'),
+  'ds-06': () => import('./presets/ds-06-clinic.fonts.css'),
+  'ds-07': () => import('./presets/ds-07-atlas.fonts.css'),
+  'ds-08': () => import('./presets/ds-08-pulse.fonts.css'),
+  'ds-09': () => import('./presets/ds-09-relay.fonts.css'),
+  'ds-10': () => import('./presets/ds-10-studio.fonts.css'),
+  'ds-11': () => import('./presets/ds-11-commons.fonts.css'),
+  'ds-12': () => import('./presets/ds-12-merchant.fonts.css'),
+  'ds-13': () => import('./presets/ds-13-folio.fonts.css'),
+  'ds-14': () => import('./presets/ds-14-aurora.fonts.css'),
+  'ds-15': () => import('./presets/ds-15-grove.fonts.css'),
+  'ds-16': () => import('./presets/ds-16-arcade.fonts.css'),
+  'ds-17': () => import('./presets/ds-17-noir.fonts.css'),
+  'ds-18': () => import('./presets/ds-18-riso.fonts.css'),
+  'ds-19': () => import('./presets/ds-19-blueprint.fonts.css'),
+  'ds-20': () => import('./presets/ds-20-brutal.fonts.css'),
 };
 
 /**
