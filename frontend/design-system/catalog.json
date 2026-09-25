@@ -1,0 +1,53 @@
+{
+  "foundation": "shadcn/ui Base UI 4.21.0",
+  "policy": "Curated extensions to the fixed shadcn/ui base. Update this inventory when adding a reviewed general component.",
+  "files": [
+    "frontend/design-system/AGENTS.md",
+    "frontend/design-system/CLAUDE.md",
+    "frontend/design-system/catalog.json",
+    "frontend/design-system/controls.tsx",
+    "frontend/design-system/data-grid.tsx",
+    "frontend/design-system/date-picker.tsx",
+    "frontend/design-system/layout.tsx",
+    "frontend/design-system/navigation.tsx",
+    "frontend/design-system/page-patterns.tsx",
+    "frontend/design-system/textarea-autosize.tsx",
+    "frontend/design-system/transfer-list.tsx",
+    "frontend/design-system/tree-view.tsx",
+    "frontend/design-system/typography.tsx"
+  ],
+  "modules": {
+    "controls": ["Rating", "FloatingActionButton", "SpeedDial", "Chip"],
+    "data-grid": ["DataGrid"],
+    "date-picker": ["DatePicker", "TimePicker", "DateTimePicker", "DateRangePicker"],
+    "layout": [
+      "Box",
+      "Container",
+      "Stack",
+      "Grid",
+      "Paper",
+      "AppBar",
+      "WorkspaceLayout",
+      "PageHeader",
+      "Masonry",
+      "ImageList",
+      "Timeline"
+    ],
+    "navigation": ["BottomNavigation", "Stepper"],
+    "page-patterns": [
+      "MarketingLayout",
+      "DocumentationLayout",
+      "DashboardLayout",
+      "DetailLayout",
+      "EditorLayout",
+      "InboxLayout",
+      "GalleryLayout",
+      "FormLayout",
+      "StatusLayout"
+    ],
+    "textarea-autosize": ["TextareaAutosize"],
+    "transfer-list": ["TransferList"],
+    "tree-view": ["TreeView"],
+    "typography": ["Typography", "TextLink"]
+  }
+}

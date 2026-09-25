@@ -2,13 +2,13 @@
 
 ## Purpose
 
-Shared visual UI with identical use in at least three production callers.
+The fixed shadcn/ui foundation and application-created shared visual UI have separate homes.
 
 ## Required boundaries
 
-Accept a complete common input/output contract.
+Keep the pinned shadcn/ui base set in `ui/`. It is exempt from the three-caller rule and closed to additions, including new upstream catalog entries. A reviewed upgrade may update existing base files; adding a new base entry requires the owner to redefine the pinned set explicitly. Put new design-system work on top in `frontend/design-system`.
 
-Do not extract one- or two-use fragments or callers that cannot exercise the full component behavior.
+Put application-created reusable compositions in `app/` only after three distinct production callers can exercise the same complete input/output contract. Keep one-use behavior local and two-use fragments duplicated. Never place application compositions in `ui/`.
 
 ## Working method
 

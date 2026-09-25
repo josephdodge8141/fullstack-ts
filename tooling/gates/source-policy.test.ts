@@ -11,6 +11,13 @@ test('accepts the ordinary known directories, root allowlists, and project cover
   assert.deepEqual(await checkSourcePolicy(root), []);
 });
 
+test('accepts curated frontend design-system placement', async () => {
+  const root = await fixture({
+    'frontend/design-system/layout.tsx': 'export function Layout() { return null; }\n',
+  });
+  assert.deepEqual(await checkSourcePolicy(root), []);
+});
+
 test('rejects an unallowlisted backend root file', async () => {
   const root = await fixture({ 'backend/worker.ts': 'export const worker = 1;\n' });
   assert.deepEqual(await checkSourcePolicy(root), [

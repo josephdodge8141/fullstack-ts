@@ -21,6 +21,7 @@ export const governedFolders = [
   'frontend/assets',
   'frontend/components',
   'frontend/context',
+  'frontend/design-system',
   'frontend/hooks',
   'frontend/pages',
   'frontend/services',

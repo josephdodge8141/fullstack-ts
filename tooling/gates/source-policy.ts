@@ -99,6 +99,7 @@ function knownDirectoryError(file: string): string[] {
       'assets',
       'components',
       'context',
+      'design-system',
       'e2e',
       'hooks',
       'pages',

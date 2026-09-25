@@ -28,4 +28,34 @@ export default tseslint.config(
       'react-refresh/only-export-components': ['error', { allowConstantExport: true }],
     },
   },
+  {
+    files: ['frontend/components/ui/**/*.{ts,tsx}'],
+    rules: {
+      'react-refresh/only-export-components': [
+        'error',
+        {
+          allowConstantExport: true,
+          allowExportNames: [
+            'badgeVariants',
+            'buttonGroupVariants',
+            'buttonVariants',
+            'useCarousel',
+            'useComboboxAnchor',
+            'useDirection',
+            'markerVariants',
+            'useMessageScroller',
+            'useMessageScrollerScrollable',
+            'useMessageScrollerVisibility',
+            'navigationMenuTriggerStyle',
+            'useSidebar',
+            'tabsListVariants',
+            'createToastManager',
+            'toast',
+            'useToastManager',
+            'toggleVariants',
+          ],
+        },
+      ],
+    },
+  },
 );

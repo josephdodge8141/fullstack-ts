@@ -33,9 +33,59 @@ export function validateExportManifest(files: readonly string[]): void {
   }
 }
 
+export function validateUiFoundation(
+  files: readonly string[],
+  requiredFiles: readonly string[],
+): void {
+  const missing = requiredFiles.filter((file) => !files.includes(file));
+  if (missing.length > 0) {
+    throw new Error(`incomplete UI foundation: ${missing.join(', ')}`);
+  }
+  const unexpected = files.filter(
+    (file) => file.startsWith('frontend/components/ui/') && !requiredFiles.includes(file),
+  );
+  if (unexpected.length > 0) {
+    throw new Error(`changed UI foundation: ${unexpected.join(', ')}`);
+  }
+}
+
+export function validateDesignSystem(
+  files: readonly string[],
+  requiredFiles: readonly string[],
+): void {
+  const missing = requiredFiles.filter((file) => !files.includes(file));
+  if (missing.length > 0) {
+    throw new Error(`incomplete design system: ${missing.join(', ')}`);
+  }
+  const unexpected = files.filter(
+    (file) => file.startsWith('frontend/design-system/') && !requiredFiles.includes(file),
+  );
+  if (unexpected.length > 0) {
+    throw new Error(`unlisted design-system extension: ${unexpected.join(', ')}`);
+  }
+}
+
 export async function exportFactory(root: string, destination: string): Promise<readonly string[]> {
   const files = await trackedFiles(root);
   validateExportManifest(files);
+  if (files.includes('frontend/package.json')) {
+    const inventoryPath = 'frontend/ui-foundation.json';
+    if (!files.includes(inventoryPath)) throw new Error('incomplete UI foundation inventory');
+    const inventory: unknown = JSON.parse(await readFile(path.join(root, inventoryPath), 'utf8'));
+    if (!isUiFoundationInventory(inventory)) {
+      throw new Error('invalid UI foundation inventory');
+    }
+    validateUiFoundation(files, inventory.files);
+    const designInventoryPath = 'frontend/design-system/catalog.json';
+    if (!files.includes(designInventoryPath)) throw new Error('incomplete design-system inventory');
+    const designInventory: unknown = JSON.parse(
+      await readFile(path.join(root, designInventoryPath), 'utf8'),
+    );
+    if (!isUiFoundationInventory(designInventory)) {
+      throw new Error('invalid design-system inventory');
+    }
+    validateDesignSystem(files, designInventory.files);
+  }
   await mkdir(path.dirname(destination), { recursive: true });
   await mkdir(destination, { recursive: false });
   for (const file of files) {
@@ -49,6 +99,12 @@ export async function exportFactory(root: string, destination: string): Promise<
     await copyFile(source, target);
   }
   return files;
+}
+
+function isUiFoundationInventory(value: unknown): value is { files: string[] } {
+  if (typeof value !== 'object' || value === null || !('files' in value)) return false;
+  const files = value.files;
+  return Array.isArray(files) && files.every((file: unknown) => typeof file === 'string');
 }
 
 async function trackedFiles(root: string): Promise<string[]> {

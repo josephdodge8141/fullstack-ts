@@ -1,6 +1,22 @@
 Feature: Public starter application
   The starter can be used locally without cloud credentials or an account provider.
 
+  @id:public.ui-catalog @backend-noop
+  Scenario: Use the bundled component catalog
+    backend-noop: The local component catalog has no backend application surface.
+    Given I am not signed in
+    When I open the component catalog
+    Then I see "Component library"
+    When I open the example dialog
+    Then the example dialog is visible and receives focus
+
+  @id:public.ui-disabled @backend-noop
+  Scenario: Keep disabled example actions inactive
+    backend-noop: Disabled component interaction has no backend application surface.
+    Given I am not signed in
+    When I open the component catalog
+    Then the disabled example action cannot be activated
+
   @id:public.hello @backend-noop
   Scenario: Open the public landing page
     backend-noop: The landing-page heading has no backend application surface.

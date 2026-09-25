@@ -8,6 +8,8 @@ The React application, top-level pages and browser acceptance support.
 
 Keep most feature behavior in pages and validate every API response in services.
 
+Use `components/ui` only for the pinned shadcn/ui base set. It is fixed, closed to additions and exempt from the three-caller rule. Build curated general design-system extensions in `design-system`, also exempt from caller counting. Put application-created reusable compositions in `components/app` only after three distinct compatible production callers need the full contract; otherwise keep them local to callers.
+
 Keep the default starter public and auth-free. Add authentication only with new canonical behaviors and a real acceptance path.
 
 ## Working method

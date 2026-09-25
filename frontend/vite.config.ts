@@ -1,5 +1,7 @@
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
+import { fileURLToPath } from 'node:url';
 
 const portFromEnvironment = (value: string | undefined, fallback: number): number => {
   if (value === undefined || value.trim() === '') return fallback;
@@ -21,7 +23,10 @@ export default defineConfig(({ mode }) => {
   };
 
   return {
-    plugins: [react()],
+    plugins: [react(), tailwindcss()],
+    resolve: {
+      alias: { '@': fileURLToPath(new URL('.', import.meta.url)) },
+    },
     server: {
       port: portFromEnvironment(environment.E2E_FRONTEND_PORT, 4173),
       proxy,

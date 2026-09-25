@@ -41,7 +41,14 @@ test('canonical feature files are the catalog source rather than copied text', a
 
   assert.deepEqual(
     catalog.cases.map((catalogCase) => catalogCase.id),
-    ['public.hello', 'public.health', 'public.no-account-controls', 'public.no-auth-route'],
+    [
+      'public.ui-catalog',
+      'public.ui-disabled',
+      'public.hello',
+      'public.health',
+      'public.no-account-controls',
+      'public.no-auth-route',
+    ],
   );
 });
 

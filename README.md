@@ -2,6 +2,8 @@
 
 An auth-free TypeScript starter with React, Express, shared Zod contracts, and canonical Cucumber behaviors. `docker compose up --build` runs Caddy, frontend, and backend locally. Open `http://app.localhost:8088` for Hello World and `http://app.localhost:8088/api/v1/health` for `{"status":"ok"}`.
 
+The frontend includes the pinned shadcn/ui Base UI catalog with Tailwind CSS v4. The fixed source lives in `frontend/components/ui`; `frontend/ui-foundation.json` records its export inventory. Curated components in `frontend/design-system` add data grid, date and time pickers, tree and transfer lists, controls, navigation, layout primitives, a workspace shell, and nine page layouts. `frontend/design-system/catalog.json` records the extensions. Open `http://app.localhost:8088/components` for links to working examples. The [component system plan](docs/frontend-component-system-plan.md) tracks depth and motion coverage. The twenty visual briefs remain open in [the brief plan](docs/design-system-briefs-plan.md).
+
 `npm ci && npm run check` runs the repository gate. `npm run proof:clean-clone` verifies a clean generated snapshot; `npm run proof:docker` adds the real Compose and browser proof. The default starter has no auth or sample CRUD flow. DynamoDB is provisioned for dedicated application stages but unused by the Hello World app.
 
 ## AWS delivery
