@@ -1,11 +1,5 @@
 # Compose preview contract
 
-Docker Compose is the only application-maintained container and dependency description. The preview compiler consumes `docker compose config --format json`, validates the normalized result, and applies only the documented `x-preview` extension. It never prints expanded secret values or silently ignores behavior-changing fields.
+Docker Compose is the complete local run. The preview compiler consumes `docker compose config --format json`, checks the `x-preview` extension, and accepts this starter's Caddy router, frontend, and backend in one Fargate task. Caddy alone exposes public ports. The local Caddyfile bind mount is explicitly declared as local-only; `infra/runtime/Dockerfile.router` copies that same file into the preview image. Unsupported fields, services, networks, mounts, capabilities, or secrets fail before cloud mutation; the compiler does not silently omit them.
 
-Version one supports exactly one frontend, one backend and one Caddy router, plus explicitly supported dependency and one-shot containers. All containers share one Fargate task network namespace, so their listening ports must be unique. Caddy alone exposes ports 80 and 443. Local bind mounts and development commands must be explicitly removed or replaced for preview builds.
-
-The extension may identify roles and routes, health/startup interpretation, production build targets or commands, local-only fields, internal endpoint overrides and whole-task resources. It is not a second service manifest and cannot contain arbitrary deployment hooks.
-
-Privileged containers, Docker socket or host device mounts, host/PID assumptions, custom overlay networking, unresolved secret references, application scaling and unsupported Compose fields fail before cloud mutation. Startup/readiness checks are distinct from ongoing liveness checks; readiness loss alone must not restart a dependency such as Keycloak.
-
-Named application volumes are task-lifetime storage. Certificate storage is a separately owned platform concern. Production and application data durability are outside this contract.
+A generated application that adds dependencies must extend the compiler and provider contract, canonical factory behavior, and adapter tests before claiming preview support. CDK dev/prod peripherals are defined from that application's own requirements, not inferred from Compose.

@@ -1,0 +1,211 @@
+name: Application delivery
+on:
+  push:
+    branches: [main]
+permissions: {}
+concurrency:
+  group: application-delivery
+  cancel-in-progress: false
+jobs:
+  dev:
+    if: vars.APPLICATION_DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    environment: dev
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      backend_image: ${{ steps.release.outputs.backend_image }}
+      frontend_sha: ${{ steps.release.outputs.frontend_sha }}
+      release_sha: ${{ steps.release.outputs.release_sha }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ vars.APPLICATION_DEPLOY_ROLE_ARN }}
+      - uses: aws-actions/amazon-ecr-login@03f1aad4c6c7ffd436567f42f9384779290529bd
+      - name: Build one immutable release
+        id: release
+        env:
+          FOUNDATION_STACK: ${{ vars.PREVIEW_FOUNDATION_STACK }}
+          RELEASE_SHA: ${{ github.sha }}
+        run: |
+          outputs="$(aws cloudformation describe-stacks --stack-name "$FOUNDATION_STACK" --query 'Stacks[0].Outputs' --output json)"
+          output() { jq -er --arg key "$1" '.[] | select(.OutputKey == $key) | .OutputValue' <<<"$outputs"; }
+          repository="$(output ReleaseBackendRepositoryUri)"
+          bucket="$(output ReleaseArtifactBucketName)"
+          manifest_key="releases/${RELEASE_SHA}/release-manifest.json"
+          if aws s3api head-object --bucket "$bucket" --key "$manifest_key" >/dev/null 2>&1; then
+            aws s3 cp "s3://${bucket}/${manifest_key}" release-manifest.json --only-show-errors
+            aws s3 cp "s3://${bucket}/releases/${RELEASE_SHA}/frontend-dist.tar.gz" frontend-dist.tar.gz --only-show-errors
+            backend_image="$(jq -er .backendImageUri release-manifest.json)"
+            frontend_sha="$(jq -er .frontendSha256 release-manifest.json)"
+            jq -e --arg sha "$RELEASE_SHA" --arg image "$backend_image" --arg frontend "$frontend_sha" '.version == 1 and .releaseSha == $sha and .backendImageUri == $image and .frontendSha256 == $frontend' release-manifest.json
+            test "${backend_image%@*}" = "$repository"
+            printf '%s  %s\n' "$frontend_sha" frontend-dist.tar.gz | sha256sum --check
+          else
+            repo_name="${repository#*/}"
+            if aws ecr describe-images --repository-name "$repo_name" --image-ids "imageTag=${RELEASE_SHA}" >/dev/null 2>&1; then
+              echo 'Existing release image has no complete release manifest' >&2
+              exit 1
+            fi
+            docker build --pull -t "${repository}:${RELEASE_SHA}" -f backend/Dockerfile.lambda .
+            docker push "${repository}:${RELEASE_SHA}"
+            digest="$(aws ecr describe-images --repository-name "$repo_name" --image-ids "imageTag=${RELEASE_SHA}" --query 'imageDetails[0].imageDigest' --output text)"
+            backend_image="${repository}@${digest}"
+            tar -C frontend/dist -czf frontend-dist.tar.gz .
+            frontend_sha="$(sha256sum frontend-dist.tar.gz | cut -d ' ' -f 1)"
+            jq -n --arg releaseSha "$RELEASE_SHA" --arg backendImageUri "$backend_image" --arg frontendSha256 "$frontend_sha" '{version:1,releaseSha:$releaseSha,backendImageUri:$backendImageUri,frontendSha256:$frontendSha256}' > release-manifest.json
+            aws s3 cp frontend-dist.tar.gz "s3://${bucket}/releases/${RELEASE_SHA}/frontend-dist.tar.gz" --only-show-errors
+            aws s3 cp release-manifest.json "s3://${bucket}/${manifest_key}" --content-type application/json --only-show-errors
+          fi
+          mkdir frontend-release
+          tar -C frontend-release -xzf frontend-dist.tar.gz
+          echo "backend_image=$backend_image" >> "$GITHUB_OUTPUT"
+          echo "frontend_sha=$frontend_sha" >> "$GITHUB_OUTPUT"
+          echo "release_sha=$RELEASE_SHA" >> "$GITHUB_OUTPUT"
+          echo "artifact_bucket=$bucket" >> "$GITHUB_OUTPUT"
+      - name: Deploy development application
+        env:
+          APPLICATION_NAME: ${{ vars.APPLICATION_NAME }}
+          AWS_REGION: ${{ vars.AWS_REGION }}
+          CERTIFICATE_ARN: ${{ vars.CLOUDFRONT_CERTIFICATE_ARN }}
+          BACKEND_IMAGE: ${{ steps.release.outputs.backend_image }}
+          RELEASE_SHA: ${{ steps.release.outputs.release_sha }}
+          FRONTEND_SHA: ${{ steps.release.outputs.frontend_sha }}
+        run: |
+          npx cdk deploy FullstackTs-dev --require-approval never --outputs-file cdk-outputs.json -c "foundation:applicationName=${APPLICATION_NAME}" -c application:stage=dev -c "application:backendImageUri=${BACKEND_IMAGE}" -c "application:certificateArn=${CERTIFICATE_ARN}"
+          bucket="$(jq -er '."FullstackTs-dev".FrontendBucketName' cdk-outputs.json)"
+          aws s3 sync frontend-release/ "s3://${bucket}/" --delete --only-show-errors
+          jq -n --arg releaseSha "$RELEASE_SHA" --arg frontendSha256 "$FRONTEND_SHA" '{version:1,releaseSha:$releaseSha,frontendSha256:$frontendSha256}' > deployment.json
+          aws s3 cp deployment.json "s3://${bucket}/deployment.json" --content-type application/json --cache-control no-store --only-show-errors
+          distribution="$(jq -er '."FullstackTs-dev".DistributionId' cdk-outputs.json)"
+          invalidation="$(aws cloudfront create-invalidation --distribution-id "$distribution" --paths '/*' --query 'Invalidation.Id' --output text)"
+          aws cloudfront wait invalidation-completed --distribution-id "$distribution" --id "$invalidation"
+      - name: Verify development and record promotion receipt
+        env:
+          APPLICATION_NAME: ${{ vars.APPLICATION_NAME }}
+          RELEASE_SHA: ${{ steps.release.outputs.release_sha }}
+          BACKEND_IMAGE: ${{ steps.release.outputs.backend_image }}
+          FRONTEND_SHA: ${{ steps.release.outputs.frontend_sha }}
+          ARTIFACT_BUCKET: ${{ steps.release.outputs.artifact_bucket }}
+        run: |
+          url="https://dev.${APPLICATION_NAME}.joedodge.dev"
+          curl --fail --retry 12 --retry-all-errors --retry-delay 5 "$url/api/v1/health" | jq -e '.status == "ok"'
+          curl --fail --retry 12 --retry-all-errors --retry-delay 5 "$url/" | grep -q 'id="root"'
+          curl --fail --retry 12 --retry-all-errors --retry-delay 5 "$url/deployment.json" | jq -e --arg sha "$RELEASE_SHA" --arg frontend "$FRONTEND_SHA" '.releaseSha == $sha and .frontendSha256 == $frontend'
+          function_name="$(jq -er '."FullstackTs-dev".BackendFunctionName' cdk-outputs.json)"
+          test "$(aws lambda get-function --function-name "$function_name" --query 'Code.ImageUri' --output text)" = "$BACKEND_IMAGE"
+          jq -n --arg sha "$RELEASE_SHA" --arg image "$BACKEND_IMAGE" --arg frontend "$FRONTEND_SHA" '{version:1,releaseSha:$sha,backendImageUri:$image,frontendSha256:$frontend}' > dev-verification.json
+          aws s3 cp dev-verification.json "s3://${ARTIFACT_BUCKET}/releases/${RELEASE_SHA}/dev-verification.json" --content-type application/json --only-show-errors
+  prod:
+    needs: dev
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    environment: prod
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          ref: ${{ needs.dev.outputs.release_sha }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci
+      - run: npm run build:contracts && npm run build -w @app/infra
+      - uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ vars.APPLICATION_DEPLOY_ROLE_ARN }}
+      - name: Resolve exact development-tested artifacts
+        env:
+          FOUNDATION_STACK: ${{ vars.PREVIEW_FOUNDATION_STACK }}
+          RELEASE_SHA: ${{ needs.dev.outputs.release_sha }}
+          DEV_BACKEND_IMAGE: ${{ needs.dev.outputs.backend_image }}
+          DEV_FRONTEND_SHA: ${{ needs.dev.outputs.frontend_sha }}
+        run: |
+          outputs="$(aws cloudformation describe-stacks --stack-name "$FOUNDATION_STACK" --query 'Stacks[0].Outputs' --output json)"
+          bucket="$(jq -er '.[] | select(.OutputKey == "ReleaseArtifactBucketName") | .OutputValue' <<<"$outputs")"
+          aws s3 cp "s3://${bucket}/releases/${RELEASE_SHA}/release-manifest.json" release-manifest.json --only-show-errors
+          aws s3 cp "s3://${bucket}/releases/${RELEASE_SHA}/dev-verification.json" dev-verification.json --only-show-errors
+          aws s3 cp "s3://${bucket}/releases/${RELEASE_SHA}/frontend-dist.tar.gz" frontend-dist.tar.gz --only-show-errors
+          for file in release-manifest.json dev-verification.json; do
+            jq -e --arg sha "$RELEASE_SHA" --arg image "$DEV_BACKEND_IMAGE" --arg frontend "$DEV_FRONTEND_SHA" '.version == 1 and .releaseSha == $sha and .backendImageUri == $image and .frontendSha256 == $frontend' "$file"
+          done
+          printf '%s  %s\n' "$DEV_FRONTEND_SHA" frontend-dist.tar.gz | sha256sum --check
+          repository="$(jq -er '.[] | select(.OutputKey == "ReleaseBackendRepositoryUri") | .OutputValue' <<<"$outputs")"
+          test "${DEV_BACKEND_IMAGE%@*}" = "$repository"
+          digest="${DEV_BACKEND_IMAGE##*@}"
+          aws ecr batch-get-image --repository-name "${repository#*/}" --image-ids "imageDigest=${digest}" --query 'images[0].imageId.imageDigest' --output text | grep -Fx "$digest"
+          mkdir frontend-release
+          tar -C frontend-release -xzf frontend-dist.tar.gz
+      - name: Require available backup before an existing production table update
+        env:
+          APPLICATION_NAME: ${{ vars.APPLICATION_NAME }}
+          RELEASE_SHA: ${{ needs.dev.outputs.release_sha }}
+        run: |
+          table="${APPLICATION_NAME}-prod"
+          if aws dynamodb describe-table --table-name "$table" > table-description.json 2> table-error.txt; then
+            backup="${table}-${RELEASE_SHA:0:12}-${GITHUB_RUN_ID}"
+            aws dynamodb create-backup --table-name "$table" --backup-name "$backup" --query 'BackupDetails.BackupArn' --output text > backup-arn.txt
+            backup_arn="$(cat backup-arn.txt)"
+            available=false
+            for attempt in $(seq 1 60); do
+              status="$(aws dynamodb describe-backup --backup-arn "$backup_arn" --query 'BackupDescription.BackupDetails.BackupStatus' --output text)"
+              if test "$status" = AVAILABLE; then available=true; break; fi
+              test "$status" = CREATING || { echo "Backup status: $status" >&2; exit 1; }
+              sleep 10
+            done
+            test "$available" = true
+          elif ! grep -q ResourceNotFoundException table-error.txt; then
+            cat table-error.txt >&2
+            exit 1
+          fi
+      - name: Confirm selected release is still main
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ needs.dev.outputs.release_sha }}
+        run: test "$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq .sha)" = "$RELEASE_SHA"
+      - name: Deploy the exact artifacts to production
+        env:
+          APPLICATION_NAME: ${{ vars.APPLICATION_NAME }}
+          CERTIFICATE_ARN: ${{ vars.CLOUDFRONT_CERTIFICATE_ARN }}
+          BACKEND_IMAGE: ${{ needs.dev.outputs.backend_image }}
+          RELEASE_SHA: ${{ needs.dev.outputs.release_sha }}
+          FRONTEND_SHA: ${{ needs.dev.outputs.frontend_sha }}
+        run: |
+          npx cdk deploy FullstackTs-prod --require-approval never --outputs-file cdk-outputs.json -c "foundation:applicationName=${APPLICATION_NAME}" -c application:stage=prod -c "application:backendImageUri=${BACKEND_IMAGE}" -c "application:certificateArn=${CERTIFICATE_ARN}"
+          bucket="$(jq -er '."FullstackTs-prod".FrontendBucketName' cdk-outputs.json)"
+          aws s3 sync frontend-release/ "s3://${bucket}/" --delete --only-show-errors
+          jq -n --arg releaseSha "$RELEASE_SHA" --arg frontendSha256 "$FRONTEND_SHA" '{version:1,releaseSha:$releaseSha,frontendSha256:$frontendSha256}' > deployment.json
+          aws s3 cp deployment.json "s3://${bucket}/deployment.json" --content-type application/json --cache-control no-store --only-show-errors
+          distribution="$(jq -er '."FullstackTs-prod".DistributionId' cdk-outputs.json)"
+          invalidation="$(aws cloudfront create-invalidation --distribution-id "$distribution" --paths '/*' --query 'Invalidation.Id' --output text)"
+          aws cloudfront wait invalidation-completed --distribution-id "$distribution" --id "$invalidation"
+      - name: Verify production
+        env:
+          APPLICATION_NAME: ${{ vars.APPLICATION_NAME }}
+          RELEASE_SHA: ${{ needs.dev.outputs.release_sha }}
+          BACKEND_IMAGE: ${{ needs.dev.outputs.backend_image }}
+          FRONTEND_SHA: ${{ needs.dev.outputs.frontend_sha }}
+        run: |
+          url="https://prod.${APPLICATION_NAME}.joedodge.dev"
+          curl --fail --retry 12 --retry-all-errors --retry-delay 5 "$url/api/v1/health" | jq -e '.status == "ok"'
+          curl --fail --retry 12 --retry-all-errors --retry-delay 5 "$url/" | grep -q 'id="root"'
+          curl --fail --retry 12 --retry-all-errors --retry-delay 5 "$url/deployment.json" | jq -e --arg sha "$RELEASE_SHA" --arg frontend "$FRONTEND_SHA" '.releaseSha == $sha and .frontendSha256 == $frontend'
+          function_name="$(jq -er '."FullstackTs-prod".BackendFunctionName' cdk-outputs.json)"
+          test "$(aws lambda get-function --function-name "$function_name" --query 'Code.ImageUri' --output text)" = "$BACKEND_IMAGE"

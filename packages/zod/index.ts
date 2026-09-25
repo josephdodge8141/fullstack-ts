@@ -1,18 +1,4 @@
 export {
-  anonymousSessionSchema,
-  authenticatedSessionSchema,
-  authPrincipalSchema,
-  authSessionSchema,
-  loginRequestSchema,
-  signupRequestSchema,
-  type AnonymousSession,
-  type AuthenticatedSession,
-  type AuthPrincipal,
-  type AuthSession,
-  type LoginRequest,
-  type SignupRequest,
-} from './schemas/auth.js';
-export {
   behaviorCaseSchema,
   behaviorCatalogSchema,
   behaviorCategorySchema,

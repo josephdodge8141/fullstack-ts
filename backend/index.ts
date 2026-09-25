@@ -79,7 +79,7 @@ async function closeConnections(connections: Connections, timeoutMs: number): Pr
 
 export async function startServer(
   environment: Environment = loadEnvironment(),
-  connections: Connections = createConnections(environment),
+  connections: Connections = createConnections(),
   runtime: ServerRuntimeOptions = {},
 ): Promise<RunningServer> {
   let server: Server | undefined;
@@ -90,7 +90,7 @@ export async function startServer(
   };
 
   try {
-    const createdServer = createServer(createApp({ connections, environment }));
+    const createdServer = createServer(createApp({ connections }));
     server = createdServer;
     await new Promise<void>((resolve, reject) => {
       const onError = (error: Error): void => reject(error);

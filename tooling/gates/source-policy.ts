@@ -8,6 +8,7 @@ const SKIPPED_DIRECTORIES = new Set([
   '.claude',
   '.git',
   'artifacts',
+  'cdk.out',
   'dist',
   'node_modules',
 ]);
@@ -34,6 +35,7 @@ const ROOT_SOURCE_FILES = {
     'main.tsx',
     'playwright.config.ts',
     'playwright.compose.config.ts',
+    'playwright.preview.config.ts',
     'vite.config.ts',
   ],
   infra: [],

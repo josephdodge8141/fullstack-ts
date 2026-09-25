@@ -12,9 +12,6 @@ test('the canonical catalog expands examples and preserves backgrounds and argum
   const invalidResult = catalog.cases.find(
     (catalogCase) => catalogCase.id === 'factory.accounting-invalid-outcome::missing-result',
   );
-  const invalidSignup = catalog.cases.find(
-    (catalogCase) => catalogCase.id === 'auth.signup-invalid::missing-email',
-  );
 
   assert.ok(invalidResult);
   assert.equal(
@@ -29,20 +26,10 @@ test('the canonical catalog expands examples and preserves backgrounds and argum
   assert.equal(invalidResult.steps[2]?.argument?.content, 'no linked result');
   assert.equal(invalidResult.example?.name, 'Invalid execution results');
   assert.equal(invalidResult.example?.values.reported_condition, 'no linked result');
-  assert.ok(invalidSignup);
-  assert.equal(invalidSignup.steps[2]?.argument?.type, 'dataTable');
-  assert.deepEqual(invalidSignup.steps[2]?.argument?.rows, [
-    ['field', 'value'],
-    ['email', '[blank]'],
-  ]);
   assert.equal(
-    catalog.cases.filter((catalogCase) => catalogCase.scenarioId === 'auth.signup-invalid').length,
-    2,
-  );
-  assert.equal(
-    catalog.cases.find((catalogCase) => catalogCase.id === 'auth.callback-rejection::invalid-state')
-      ?.noops.frontend,
-    'Callback protocol invariants are exercised at the backend provider boundary rather than through the hosted provider UI.',
+    catalog.cases.find((catalogCase) => catalogCase.id === 'public.no-account-controls')?.noops
+      .backend,
+    'The account controls are a frontend surface and do not require backend behavior.',
   );
 });
 
@@ -54,7 +41,7 @@ test('canonical feature files are the catalog source rather than copied text', a
 
   assert.deepEqual(
     catalog.cases.map((catalogCase) => catalogCase.id),
-    ['public.hello', 'public.health'],
+    ['public.hello', 'public.health', 'public.no-account-controls', 'public.no-auth-route'],
   );
 });
 

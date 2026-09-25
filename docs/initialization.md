@@ -1,13 +1,5 @@
 # Initialization
 
-A generated repository starts locally with `docker compose up --build`; no `.env` copy or cloud credentials are required for the public Hello World and health route. Open `http://app.localhost:8088` and request `/api/v1/health` through the same origin.
+The default starter is auth-free. Run `npm ci`, `npm run check`, `npm run proof:clean-clone`, and, with Docker, `npm run proof:docker`. The clean-clone proof exports tracked source into a temporary directory. The Docker proof boots the real Caddy/frontend/backend Compose run and exercises public behavior.
 
-For a shipped-factory proof, run `npm ci`, then `npm run check` and `npm run proof:clean-clone`. The latter exports only sorted Git-tracked files to a temporary clean clone, installs from the lockfile, and runs the root checks. Run `npm run proof:docker` when Docker is available to add Compose, real Keycloak-backed authentication behavior, and real-stack Playwright coverage.
-
-Cloud preview initialization will be a separate, explicit operation. The current repository can validate and synthesize the generic permanent foundation with `npm run synth:foundation`; it does not deploy, inspect an AWS account, delegate DNS, enroll GitHub, configure OIDC, verify a Bedrock model or prove a live preview.
-
-The initialization adapter must eventually validate repository and account configuration, inspect or create a compatible foundation, enroll the immutable repository identity, configure narrowly scoped GitHub OIDC roles, verify the existing preview child hosted zone and selected Bedrock model, and prove an actual preview before installing the required `factory/preview` status. See `aws-preview-adapter.md` for the resource and permission boundary.
-
-The public template contains generic `.env.example` values. Account IDs, hosted-zone IDs, repository settings and synthetic preview credentials belong in repository variables, environments or secrets. Rerunning initialization must inspect and reuse compatible resources rather than create duplicates.
-
-Use `.claude/skills/initialize/SKILL.md` when it exists in a generated repository. It records the exact local commands and evidence for this shipped version. It does not enroll GitHub, create AWS resources, configure DNS or deploy production.
+Cloud enrollment is a separate operation using `.claude/skills/fullstack-aws-delivery/SKILL.md`. The repository ships CDK, runtime commands, and Actions, but none of those files proves an AWS deployment or GitHub branch rule. Inspect identity and existing resources first, then follow the skill's AWS/GitHub/Cloudflare sequence and collect live lifecycle evidence.

@@ -1,19 +1,11 @@
 # fullstack-ts
 
-Opinionated public TypeScript factory: React, Node, shared Zod contracts, Cucumber behavior-first development, a bounded preview lifecycle reducer, and a minimal permanent AWS foundation.
+An auth-free TypeScript starter with React, Express, shared Zod contracts, and canonical Cucumber behaviors. `docker compose up --build` runs Caddy, frontend, and backend locally. Open `http://app.localhost:8088` for Hello World and `http://app.localhost:8088/api/v1/health` for `{"status":"ok"}`.
 
-Wave 2 adds a credential-free local slice: Caddy, Keycloak backed by Postgres, backend OIDC/session handling, and frontend signup, login, and logout. Public Hello World and `/api/v1/health` remain available without a session.
+`npm ci && npm run check` runs the repository gate. `npm run proof:clean-clone` verifies a clean generated snapshot; `npm run proof:docker` adds the real Compose and browser proof. The default starter has no auth or sample CRUD flow. DynamoDB is provisioned for dedicated application stages but unused by the Hello World app.
 
-Run `docker compose up --build`, then open [http://app.localhost:8088](http://app.localhost:8088). The checked-in realm import and `.env.example` use local dummy credentials only. While Compose is running, `npm run test:behaviors:frontend:compose` executes every applicable frontend Cucumber case with exact 1:1 result accounting, and `npm run test:browser:compose -w @app/frontend` runs focused Playwright coverage. `npm run check` includes the corresponding backend Cucumber adapter and the repository gate.
+## AWS delivery
 
-The imported non-MFA test identity is `test-user@example.test` with password `a-long-cucumber-test-password`.
+`compose.yaml` is the local dependency source. `docker compose config --format json` is validated by `infra/runtime/compose.ts` and compiled into one bounded ECS/Fargate task for each PR preview. The compiler rejects unsupported Compose semantics. `FullstackTsPreviewFoundation` is the permanent CDK foundation; ordinary previews use `infra/runtime/preview-cli.ts` and expire four hours after first successful HTTPS health. `FullstackTs-dev` and `FullstackTs-prod` are separate CDK application stacks with Lambda, API Gateway, DynamoDB, private S3, and CloudFront. Main-branch delivery promotes the same image digest and frontend archive after dev verification.
 
-`npm run synth:foundation` synthesizes the generic permanent CDK foundation without credentials or AWS lookups. It does not deploy. The owned resources and strict boundary for a future dynamic preview adapter are documented in `docs/aws-preview-adapter.md`.
-
-Factory commands:
-
-- `npm run package:factory` exports sorted tracked source into `artifacts/factory`.
-- `npm run proof:clean-clone` exports a fresh clone, runs `npm ci`, and runs the root `check`.
-- `npm run proof:docker` runs the clean-clone proof plus Compose, health, frontend behavior, and Playwright checks. Docker is required for this explicit proof.
-
-The export excludes Git metadata, dependencies, build output, and local environment files. Packaging also rejects common private-key, AWS access-key, and absolute home-directory signatures; public review remains responsible for other sensitive content. Cloud enrollment, GitHub setup, AWS deployment, browser-agent CI, and production remain outside this version.
+The checked-in Actions and CDK require owner enrollment before any live deployment. Use `.claude/skills/fullstack-aws-delivery/SKILL.md` for the ordered AWS, GitHub, and Cloudflare setup and live proof. Hosts follow `pr-<number>.preview.<project>.joedodge.dev`, `dev.<project>.joedodge.dev`, and `prod.<project>.joedodge.dev`, where `<project>` is `applicationName`. Do not commit account IDs, hosted-zone IDs, certificates, or credentials.

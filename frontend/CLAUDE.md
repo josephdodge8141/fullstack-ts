@@ -8,7 +8,7 @@ The React application, top-level pages and browser acceptance support.
 
 Keep most feature behavior in pages and validate every API response in services.
 
-Do not store provider tokens or replace real Keycloak with a fake auth UI in acceptance.
+Keep the default starter public and auth-free. Add authentication only with new canonical behaviors and a real acceptance path.
 
 ## Working method
 

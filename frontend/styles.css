@@ -102,13 +102,6 @@ button.button:disabled {
   opacity: 0.65;
 }
 
-.session-label {
-  width: 100%;
-  margin: 0;
-  color: #526360;
-  font-weight: 700;
-}
-
 .button:hover,
 .button:focus-visible {
   transform: translateY(-1px);

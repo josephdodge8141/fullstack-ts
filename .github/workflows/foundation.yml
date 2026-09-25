@@ -1,0 +1,40 @@
+name: Owner foundation change
+on:
+  workflow_dispatch: {}
+permissions: {}
+concurrency:
+  group: owner-foundation
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    environment: foundation
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.repository.default_branch }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci
+      - run: npm run build:contracts && npm run build -w @app/infra
+      - uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ vars.FOUNDATION_DEPLOY_ROLE_ARN }}
+      - name: Deploy owned permanent preview, release and identity foundations
+        env:
+          APPLICATION_NAME: ${{ vars.APPLICATION_NAME }}
+          EXISTING_GITHUB_OIDC_PROVIDER_ARN: ${{ vars.EXISTING_GITHUB_OIDC_PROVIDER_ARN }}
+        run: |
+          context=(-c "foundation:applicationName=${APPLICATION_NAME}" -c "identity:repository=${GITHUB_REPOSITORY}")
+          if test -n "$EXISTING_GITHUB_OIDC_PROVIDER_ARN"; then
+            context+=(-c "identity:existingProviderArn=${EXISTING_GITHUB_OIDC_PROVIDER_ARN}")
+          fi
+          npx cdk deploy FullstackTsPreviewFoundation FullstackTsDeliveryIdentity --require-approval never "${context[@]}"
