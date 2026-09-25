@@ -32,9 +32,11 @@ export const colorModeSchema = z.enum(['light', 'dark', 'system']);
 export const designSystemPreferenceSchema = z.strictObject({
   preset: designSystemIdSchema,
   mode: colorModeSchema,
+  /** True once the person picks a mode; until then presets apply their own default mode. */
+  explicitMode: z.boolean().default(false),
 });
 
 export type DesignSystemId = z.infer<typeof designSystemIdSchema>;
 export type DesignSystemStatus = z.infer<typeof designSystemStatusSchema>;
 export type ColorMode = z.infer<typeof colorModeSchema>;
-export type DesignSystemPreference = z.infer<typeof designSystemPreferenceSchema>;
+export type DesignSystemPreference = z.output<typeof designSystemPreferenceSchema>;
