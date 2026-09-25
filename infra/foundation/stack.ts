@@ -6,6 +6,7 @@ import { AttributeType, BillingMode, Table } from 'aws-cdk-lib/aws-dynamodb';
 import { PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { HostedZone } from 'aws-cdk-lib/aws-route53';
+import { BlockPublicAccess, Bucket, BucketEncryption } from 'aws-cdk-lib/aws-s3';
 import type { Construct } from 'constructs';
 
 import { type FoundationConfig, type FoundationOutputs, parseFoundationConfig } from './config.js';
@@ -15,6 +16,9 @@ export interface PreviewFoundationStackProps extends StackProps {
 }
 
 export class PreviewFoundationStack extends Stack {
+  public readonly previewZoneId: string;
+  public readonly releaseArtifactBucketName: string;
+
   public constructor(scope: Construct, id: string, props: PreviewFoundationStackProps) {
     super(scope, id, props);
     const config = parseFoundationConfig(props.config);
@@ -62,12 +66,27 @@ export class PreviewFoundationStack extends Stack {
 
     const frontendRepository = this.imageRepository('FrontendImages', config, 'frontend');
     const backendRepository = this.imageRepository('BackendImages', config, 'backend');
+    const routerRepository = this.imageRepository('RouterImages', config, 'router');
+    const releaseRepository = new Repository(this, 'ReleaseBackendImages', {
+      imageScanOnPush: true,
+      imageTagMutability: TagMutability.IMMUTABLE,
+      removalPolicy: RemovalPolicy.RETAIN,
+      repositoryName: `${config.applicationName}-release-backend`,
+    });
+    const releaseBucket = new Bucket(this, 'ReleaseArtifacts', {
+      blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
+      encryption: BucketEncryption.S3_MANAGED,
+      enforceSSL: true,
+      versioned: true,
+      removalPolicy: RemovalPolicy.RETAIN,
+    });
 
     const stateTable = new Table(this, 'PreviewState', {
       billingMode: BillingMode.PAY_PER_REQUEST,
       partitionKey: { name: 'previewKey', type: AttributeType.STRING },
       removalPolicy: RemovalPolicy.RETAIN,
       tableName: `${config.applicationName}-preview-state`,
+      timeToLiveAttribute: 'expiresAt',
     });
 
     const logGroup = new LogGroup(this, 'PreviewLogs', {
@@ -81,6 +100,11 @@ export class PreviewFoundationStack extends Stack {
       description: 'Pulls preview images and writes container logs for Fargate',
       roleName: `${config.applicationName}-preview-task-execution`,
     });
+    const taskRole = new Role(this, 'TaskRole', {
+      assumedBy: new ServicePrincipal('ecs-tasks.amazonaws.com'),
+      description: 'Runtime identity for the disposable preview task',
+      roleName: `${config.applicationName}-preview-task`,
+    });
     taskExecutionRole.addToPolicy(
       new PolicyStatement({ actions: ['ecr:GetAuthorizationToken'], resources: ['*'] }),
     );
@@ -91,7 +115,11 @@ export class PreviewFoundationStack extends Stack {
           'ecr:BatchGetImage',
           'ecr:GetDownloadUrlForLayer',
         ],
-        resources: [frontendRepository.repositoryArn, backendRepository.repositoryArn],
+        resources: [
+          frontendRepository.repositoryArn,
+          backendRepository.repositoryArn,
+          routerRepository.repositoryArn,
+        ],
       }),
     );
     taskExecutionRole.addToPolicy(
@@ -101,23 +129,28 @@ export class PreviewFoundationStack extends Stack {
       }),
     );
 
-    const previewZone = HostedZone.fromHostedZoneAttributes(this, 'PreviewZone', {
-      hostedZoneId: config.previewZoneId,
-      zoneName: config.previewZoneName,
+    const previewZone = new HostedZone(this, 'PreviewZone', {
+      zoneName: `preview.${config.applicationName}.joedodge.dev`,
     });
+    this.previewZoneId = previewZone.hostedZoneId;
+    this.releaseArtifactBucketName = releaseBucket.bucketName;
 
     const outputs: FoundationOutputs = {
       BackendRepositoryUri: backendRepository.repositoryUri,
       ClusterArn: cluster.attrArn,
       FrontendRepositoryUri: frontendRepository.repositoryUri,
+      RouterRepositoryUri: routerRepository.repositoryUri,
       LogGroupName: logGroup.logGroupName,
       PreviewZoneId: previewZone.hostedZoneId,
       PreviewZoneName: previewZone.zoneName,
       PublicSubnetIds: vpc.publicSubnets.map((subnet) => subnet.subnetId).join(','),
       StateTableName: stateTable.tableName,
       TaskExecutionRoleArn: taskExecutionRole.roleArn,
+      TaskRoleArn: taskRole.roleArn,
       TaskSecurityGroupId: taskSecurityGroup.attrGroupId,
       VpcId: vpc.vpcId,
+      ReleaseBackendRepositoryUri: releaseRepository.repositoryUri,
+      ReleaseArtifactBucketName: releaseBucket.bucketName,
     };
     for (const [outputId, value] of Object.entries(outputs)) {
       new CfnOutput(this, outputId, { value });
@@ -127,7 +160,7 @@ export class PreviewFoundationStack extends Stack {
   private imageRepository(
     id: string,
     config: FoundationConfig,
-    role: 'backend' | 'frontend',
+    role: 'backend' | 'frontend' | 'router',
   ): Repository {
     return new Repository(this, id, {
       imageScanOnPush: true,

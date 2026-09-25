@@ -1,9 +1,5 @@
-:8088 {
+{$SITE_ADDRESS} {
   @api path /api/*
-  reverse_proxy @api backend:3000
-
-  @keycloak path /realms/* /resources/* /js/*
-  reverse_proxy @keycloak keycloak:8080
-
-  reverse_proxy frontend:4173
+  reverse_proxy @api {$BACKEND_UPSTREAM}
+  reverse_proxy {$FRONTEND_UPSTREAM}
 }

@@ -1,0 +1,150 @@
+name: Trusted preview admission
+on:
+  workflow_run:
+    workflows: [Pull request candidate]
+    types: [completed]
+permissions: {}
+concurrency:
+  group: preview-${{ github.event.workflow_run.pull_requests[0].number || github.event.workflow_run.id }}
+  cancel-in-progress: false
+jobs:
+  admit:
+    if: >-
+      vars.PREVIEW_ENABLED == 'true' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.pull_requests[0].number != null
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: preview
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: read
+      id-token: write
+      statuses: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.repository.default_branch }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Resolve the current PR head and trusted workflow definition
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          candidate_sha="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" --jq .head.sha)"
+          head_repo="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" --jq .head.repo.full_name)"
+          test "$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" --jq .state)" = open
+          case "$candidate_sha" in *[!0-9a-f]*|'') exit 1 ;; esac
+          test "${#candidate_sha}" = 40
+          candidate_workflow="$(gh api "repos/${head_repo}/contents/.github/workflows/pull-request.yml?ref=${candidate_sha}" --jq .sha)"
+          trusted_workflow="$(gh api "repos/${GITHUB_REPOSITORY}/contents/.github/workflows/pull-request.yml?ref=${DEFAULT_BRANCH}" --jq .sha)"
+          test "$candidate_workflow" = "$trusted_workflow"
+          echo "CANDIDATE_SHA=$candidate_sha" >> "$GITHUB_ENV"
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: preview-candidate-${{ github.event.workflow_run.pull_requests[0].number }}-${{ env.CANDIDATE_SHA }}
+          github-token: ${{ github.token }}
+          run-id: ${{ github.event.workflow_run.id }}
+          path: candidate
+      - name: Verify artifact, run, repository, PR and current head
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CANDIDATE_SHA: ${{ env.CANDIDATE_SHA }}
+          REPOSITORY_ID: ${{ github.event.repository.id }}
+          PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          RUN_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+        run: |
+          cd candidate
+          sha256sum --check artifact-sha256.txt
+          jq -e --arg sha "$CANDIDATE_SHA" --arg mergeSha "$RUN_HEAD_SHA" --arg repositoryId "$REPOSITORY_ID" --argjson pr "$PR_NUMBER" --arg runId "$RUN_ID" --argjson attempt "$ATTEMPT" '.sha == $sha and .mergeSha == $mergeSha and .repositoryId == $repositoryId and .pullRequestNumber == $pr and .runId == $runId and .attempt == $attempt' admission.json
+          cd ..
+          test "$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" --jq .head.sha)" = "$CANDIDATE_SHA"
+          test "$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" --jq .state)" = open
+          head_repo="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" --jq .head.repo.full_name)"
+          if test "$head_repo" != "$GITHUB_REPOSITORY"; then
+            gh api "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/labels" --jq '.[].name' | grep -Fx preview-approved
+          fi
+          node --import tsx infra/runtime/compose-cli.ts candidate/compose-normalized.json
+      - name: Mark exact SHA pending
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CANDIDATE_SHA: ${{ env.CANDIDATE_SHA }}
+        run: gh api --method POST "repos/${GITHUB_REPOSITORY}/statuses/${CANDIDATE_SHA}" -f state=pending -f context=factory/preview -f description='Deploying four-hour ECS preview'
+      - uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ vars.PREVIEW_DEPLOY_ROLE_ARN }}
+      - uses: aws-actions/amazon-ecr-login@03f1aad4c6c7ffd436567f42f9384779290529bd
+        id: ecr
+      - name: Load, publish and pin candidate images
+        id: images
+        env:
+          CANDIDATE_SHA: ${{ env.CANDIDATE_SHA }}
+          PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          BACKEND_REPOSITORY: ${{ vars.PREVIEW_BACKEND_REPOSITORY }}
+          FRONTEND_REPOSITORY: ${{ vars.PREVIEW_FRONTEND_REPOSITORY }}
+          ROUTER_REPOSITORY: ${{ vars.PREVIEW_ROUTER_REPOSITORY }}
+        run: |
+          tag="pr-${PR_NUMBER}-${CANDIDATE_SHA}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          for role in backend frontend router; do
+            gzip -dc "candidate/${role}-image.tar.gz" | docker load
+            repository_var="${role^^}_REPOSITORY"
+            repository="${!repository_var}"
+            docker tag "candidate-${role}:${CANDIDATE_SHA}" "${REGISTRY}/${repository}:${tag}"
+            docker push "${REGISTRY}/${repository}:${tag}"
+            digest="$(aws ecr describe-images --repository-name "$repository" --image-ids "imageTag=${tag}" --query 'imageDetails[0].imageDigest' --output text)"
+            echo "${role}=${REGISTRY}/${repository}@${digest}" >> "$GITHUB_OUTPUT"
+          done
+      - name: Deploy and verify the candidate
+        env:
+          AWS_REGION: ${{ vars.AWS_REGION }}
+          FOUNDATION_STACK: ${{ vars.PREVIEW_FOUNDATION_STACK }}
+          CANDIDATE_SHA: ${{ env.CANDIDATE_SHA }}
+          REPOSITORY_ID: ${{ github.event.repository.id }}
+          PULL_REQUEST_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
+          PREVIEW_BACKEND_IMAGE: ${{ steps.images.outputs.backend }}
+          PREVIEW_FRONTEND_IMAGE: ${{ steps.images.outputs.frontend }}
+          PREVIEW_ROUTER_IMAGE: ${{ steps.images.outputs.router }}
+        run: |
+          outputs="$(aws cloudformation describe-stacks --stack-name "$FOUNDATION_STACK" --query 'Stacks[0].Outputs' --output json)"
+          output() { jq -er --arg key "$1" '.[] | select(.OutputKey == $key) | .OutputValue' <<<"$outputs"; }
+          export PREVIEW_CLUSTER_ARN="$(output ClusterArn)"
+          export PREVIEW_SUBNET_IDS="$(output PublicSubnetIds)"
+          export PREVIEW_SECURITY_GROUP_ID="$(output TaskSecurityGroupId)"
+          export PREVIEW_TASK_EXECUTION_ROLE_ARN="$(output TaskExecutionRoleArn)"
+          export PREVIEW_TASK_ROLE_ARN="$(output TaskRoleArn)"
+          export PREVIEW_LOG_GROUP_NAME="$(output LogGroupName)"
+          export PREVIEW_STATE_TABLE_NAME="$(output StateTableName)"
+          export PREVIEW_ZONE_ID="$(output PreviewZoneId)"
+          export PREVIEW_ZONE_NAME="$(output PreviewZoneName)"
+          export PREVIEW_COMPOSE_FILE=candidate/compose-normalized.json
+          export COMMAND_ID="admit-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          export EVENT_SEQUENCE="${GITHUB_RUN_ID}0"
+          node --import tsx infra/runtime/preview-cli.ts admit > preview-result.json
+          preview_url="$(jq -er .previewUrl preview-result.json)"
+          echo "PREVIEW_URL=$preview_url" >> "$GITHUB_ENV"
+          COMPOSE_BASE_URL="$preview_url" npm run test:behaviors:frontend:preview
+          PREVIEW_BASE_URL="$preview_url" npm run test:browser:preview -w @app/frontend
+      - name: Publish verified status
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CANDIDATE_SHA: ${{ env.CANDIDATE_SHA }}
+        run: gh api --method POST "repos/${GITHUB_REPOSITORY}/statuses/${CANDIDATE_SHA}" -f state=success -f context=factory/preview -f description='ECS preview and deployed browser checks passed' -f target_url="$PREVIEW_URL"
+      - name: Fail closed
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CANDIDATE_SHA: ${{ env.CANDIDATE_SHA }}
+        run: gh api --method POST "repos/${GITHUB_REPOSITORY}/statuses/${CANDIDATE_SHA}" -f state=failure -f context=factory/preview -f description='Preview deployment or verification failed'

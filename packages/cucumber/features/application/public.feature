@@ -1,5 +1,5 @@
 Feature: Public starter application
-  The starter can be used locally without cloud credentials or an account.
+  The starter can be used locally without cloud credentials or an account provider.
 
   @id:public.hello @backend-noop
   Scenario: Open the public landing page
@@ -17,3 +17,17 @@ Feature: Public starter application
       """json
       {"status":"ok"}
       """
+
+  @id:public.no-account-controls @backend-noop
+  Scenario: Open the starter without bundled account controls
+    backend-noop: The account controls are a frontend surface and do not require backend behavior.
+    Given the public starter is running
+    When I open the application
+    Then there are no sign-up or login controls
+
+  @id:public.no-auth-route @frontend-noop
+  Scenario: Reject a removed authentication endpoint
+    frontend-noop: The removed endpoint is a backend transport behavior without frontend interaction.
+    Given the public starter is running
+    When I request the old authentication session endpoint
+    Then the response status is 404

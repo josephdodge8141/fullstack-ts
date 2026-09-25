@@ -17,10 +17,6 @@ await startServer(
     host: '127.0.0.1',
     port: 0,
     shutdownTimeoutMs: 10,
-    publicOrigin: 'http://127.0.0.1',
-    oidcIssuer: 'http://127.0.0.1/realms/local',
-    oidcClientId: 'test-client',
-    sessionSecret: 'test-session-secret-with-at-least-thirty-two-characters',
   },
   connections,
 );

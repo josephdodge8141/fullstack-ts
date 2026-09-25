@@ -12,10 +12,6 @@ const environment = (port: number, shutdownTimeoutMs = 100): Environment => ({
   host: '127.0.0.1',
   port,
   shutdownTimeoutMs,
-  publicOrigin: 'http://127.0.0.1',
-  oidcIssuer: 'http://127.0.0.1/realms/local',
-  oidcClientId: 'test-client',
-  sessionSecret: 'test-session-secret-with-at-least-thirty-two-characters',
 });
 
 const trackedConnections = (

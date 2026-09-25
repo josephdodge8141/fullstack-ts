@@ -9,7 +9,7 @@ Treat the port as a reproducible promotion of a verified revision, repository co
 
 Read the repository's root instructions, `README.md`, `package.json`, relevant feature files, `docs/initialization.md`, `docs/aws-preview-adapter.md`, `docs/production.md`, and the actual infrastructure and workflow files before proposing commands. Repository owners may change the template after this skill is packaged; actual files and scripts win over this guidance.
 
-The shipped template currently proves local Compose behavior and credential-free CDK synthesis only. It does not ship GitHub enrollment, live AWS deployment, DNS delegation, OIDC setup, dynamic previews, browser-agent CI, or production. Report those as absent rather than inventing a transfer path.
+The shipped template contains local Compose behavior, dynamic ECS preview code, GitHub Actions, delivery identity CDK, and dedicated dev/prod CDK. Their presence does not prove any account was enrolled or a live lifecycle completed. Inspect actual deployment evidence before planning a transfer.
 
 ## Establish scope and identities
 
@@ -62,11 +62,11 @@ Read [references/aws.md](references/aws.md) before AWS changes.
 
 Use named profiles on every AWS CLI or CDK command and print `aws sts get-caller-identity` immediately before a target mutation. Never rely on whichever account happens to be the shell default. Build a source-to-target resource map that marks each item as recreate, import, migrate data, replace, external prerequisite, or intentionally omit.
 
-For this template, synthesize with the target application name, hosted-zone name, and hosted-zone ID. Physical IDs and ARNs from the personal account are evidence, not target configuration. Inspect target-account prerequisites such as CDK bootstrap resources, hosted zones and delegation, certificates, GitHub OIDC providers and roles, secrets, model access, quotas, and service-linked roles.
+For this template, synthesize with the target application name and exact target repository identity; the preview child zone is created by the foundation. Physical IDs and ARNs from the personal account are evidence, not target configuration. Inspect target-account prerequisites such as CDK bootstrap resources, hosted zones and delegation, certificates, GitHub OIDC providers and roles, secrets, model access, quotas, and service-linked roles.
 
 Run credential-free synthesis, then run a target-profile CDK diff. Present the target account ID, region, stack name, diff, retained-resource implications, estimated service impact, and rollback before requesting the deployment checkpoint. Bootstrap changes, IAM or security-group broadening, resource replacement, data transfer, image copying, and DNS cutover deserve explicit attention.
 
-Deploy only the approved target stack and parameters. Verify CloudFormation completion, stack outputs, tags, ECR immutability, DynamoDB billing and ownership expectations, log retention, task-execution-role scope, VPC/subnets/security group, hosted-zone reference, and application proof supported by the actual repository. Do not claim a live preview when only `npm run synth:foundation` exists.
+Deploy only the approved target stack and parameters. Verify CloudFormation completion, stack outputs, tags, ECR immutability, DynamoDB billing and ownership expectations, log retention, task-execution-role scope, VPC/subnets/security group, hosted-zone reference, and application proof supported by the actual repository. Do not claim a live preview from synthesis alone.
 
 Prefer rebuilding immutable images from the verified target commit. Treat DynamoDB or other application data as a distinct migration with validation and rollback; never infer it from the word infrastructure. Historical logs normally remain in the source account. Keep source resources available until target verification and any approved cutover are complete.
 
