@@ -230,10 +230,10 @@ Given('the saved design system preference is corrupt', async function (this: Fro
 });
 
 Given(
-  'the saved design system preference names an open slot',
+  'the saved design system preference names an unknown preset',
   async function (this: FrontendWorld) {
     await this.currentPage().addInitScript((key) => {
-      window.localStorage.setItem(key, JSON.stringify({ preset: 'ds-12', mode: 'light' }));
+      window.localStorage.setItem(key, JSON.stringify({ preset: 'ds-99', mode: 'dark' }));
     }, preferenceKey);
   },
 );
@@ -269,10 +269,11 @@ When('I choose the {string} design system', async function (this: FrontendWorld,
     .check();
 });
 
-When('I choose the dark color mode', async function (this: FrontendWorld) {
+When('I choose the {word} color mode', async function (this: FrontendWorld, mode: string) {
+  const name = `${mode.charAt(0).toUpperCase()}${mode.slice(1)}`;
   await this.currentPage()
     .getByRole('radiogroup', { name: 'Color mode' })
-    .getByRole('radio', { name: 'Dark', exact: true })
+    .getByRole('radio', { name, exact: true })
     .check();
 });
 
@@ -357,12 +358,10 @@ Then('the page background differs from light mode', async function (this: Fronte
   assert.notEqual(dark, light);
 });
 
-Then('the open preset slots cannot be chosen', async function (this: FrontendWorld) {
+Then('every preset slot can be chosen', async function (this: FrontendWorld) {
   const picker = this.currentPage().getByRole('radiogroup', { name: 'Design system' });
-  const openSlots = designSystems.filter((brief) => brief.status === 'open');
-  assert.ok(openSlots.length > 0);
-  for (const brief of openSlots) {
-    await expect(picker.getByRole('radio', { name: brief.name, exact: true })).toBeDisabled();
+  for (const brief of designSystems) {
+    await expect(picker.getByRole('radio', { name: brief.name, exact: true })).toBeEnabled();
   }
 });
 

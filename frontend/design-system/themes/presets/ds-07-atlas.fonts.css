@@ -1,0 +1,4 @@
+/* DS-07 Atlas fonts, loaded only when the preset is active. */
+@import '@fontsource-variable/inter-tight';
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/fira-code';

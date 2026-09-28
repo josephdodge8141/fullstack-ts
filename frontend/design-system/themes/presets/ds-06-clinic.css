@@ -1,0 +1,155 @@
+/*
+ * DS-06 Clinic
+ * A calm, highly legible teal system with generous targets for care settings.
+ *
+ * This file is the editable source of truth for the preset. The light block defines every
+ * token; the dark block overrides colors and elevation.
+ * Fonts: Atkinson Hyperlegible Next and Atkinson Hyperlegible Mono (SIL OFL 1.1, bundled through Fontsource).
+ */
+
+:root[data-theme='ds-06'] {
+  /* Canvas and surfaces */
+  --background: oklch(0.99 0.004 190);
+  --foreground: oklch(0.24 0.03 220);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.24 0.03 220);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.24 0.03 220);
+  --overlay: oklch(0.25 0.03 220 / 30%);
+
+  /* Actions */
+  --primary: oklch(0.47 0.09 195);
+  --primary-foreground: oklch(0.99 0.005 190);
+  --secondary: oklch(0.95 0.02 190);
+  --secondary-foreground: oklch(0.3 0.05 205);
+  --muted: oklch(0.965 0.008 200);
+  --muted-foreground: oklch(0.46 0.025 215);
+  --accent: oklch(0.94 0.03 250);
+  --accent-foreground: oklch(0.32 0.07 255);
+  --link: oklch(0.45 0.1 220);
+
+  /* Status */
+  --destructive: oklch(0.52 0.19 25);
+  --destructive-foreground: oklch(0.99 0 0);
+  --success: oklch(0.5 0.11 155);
+  --success-foreground: oklch(0.99 0 0);
+  --warning: oklch(0.82 0.13 85);
+  --warning-foreground: oklch(0.3 0.06 60);
+  --info: oklch(0.5 0.12 245);
+  --info-foreground: oklch(0.99 0 0);
+
+  /* Boundaries, focus and selection */
+  --border: oklch(0.9 0.012 200);
+  --input: oklch(0.84 0.02 200);
+  --ring: oklch(0.52 0.1 195);
+  --selection: oklch(0.9 0.05 195);
+  --selection-foreground: oklch(0.24 0.03 220);
+
+  /* Data */
+  --chart-1: oklch(0.47 0.09 195);
+  --chart-2: oklch(0.52 0.14 255);
+  --chart-3: oklch(0.58 0.13 40);
+  --chart-4: oklch(0.5 0.1 150);
+  --chart-5: oklch(0.52 0.15 320);
+
+  /* Navigation */
+  --sidebar: oklch(0.965 0.012 195);
+  --sidebar-foreground: oklch(0.24 0.03 220);
+  --sidebar-primary: oklch(0.47 0.09 195);
+  --sidebar-primary-foreground: oklch(0.99 0.005 190);
+  --sidebar-accent: oklch(0.92 0.03 195);
+  --sidebar-accent-foreground: oklch(0.28 0.06 205);
+  --sidebar-border: oklch(0.9 0.012 200);
+  --sidebar-ring: oklch(0.52 0.1 195);
+
+  /* Typography */
+  --type-display: 'Atkinson Hyperlegible Next Variable', ui-sans-serif, system-ui, sans-serif;
+  --type-body: 'Atkinson Hyperlegible Next Variable', ui-sans-serif, system-ui, sans-serif;
+  --type-mono:
+    'Atkinson Hyperlegible Mono Variable', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --type-display-weight: 700;
+  --type-display-tracking: -0.01em;
+  --type-body-tracking: 0.01em;
+  --type-body-leading: 1.6;
+
+  /* Shape, density and elevation */
+  --radius: 0.75rem;
+  --density: 1.08;
+  --elevation-xs: 0 1px 2px 0 oklch(0.3 0.04 210 / 4%);
+  --elevation-sm: 0 2px 6px -1px oklch(0.3 0.04 210 / 7%), 0 1px 2px 0 oklch(0.3 0.04 210 / 4%);
+  --elevation-md:
+    0 8px 20px -6px oklch(0.3 0.04 210 / 10%), 0 2px 6px -2px oklch(0.3 0.04 210 / 5%);
+  --elevation-lg:
+    0 18px 36px -12px oklch(0.3 0.04 210 / 14%), 0 4px 10px -4px oklch(0.3 0.04 210 / 5%);
+  --elevation-xl:
+    0 32px 64px -20px oklch(0.3 0.04 210 / 19%), 0 8px 16px -8px oklch(0.3 0.04 210 / 7%);
+
+  /* Motion */
+  --motion-duration-fast: 150ms;
+  --motion-duration-base: 200ms;
+  --motion-duration-slow: 320ms;
+  --motion-duration-overlay: 200ms;
+  --motion-ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --motion-ease-enter: cubic-bezier(0, 0, 0.2, 1);
+  --motion-ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --motion-ease-emphasized: cubic-bezier(0.3, 0, 0.1, 1);
+  --motion-distance: 0.375rem;
+  --motion-scale: 0.98;
+  --motion-stagger: 40ms;
+}
+
+:root[data-theme='ds-06'].dark {
+  --background: oklch(0.19 0.02 215);
+  --foreground: oklch(0.95 0.01 200);
+  --card: oklch(0.23 0.022 215);
+  --card-foreground: oklch(0.95 0.01 200);
+  --popover: oklch(0.25 0.024 215);
+  --popover-foreground: oklch(0.95 0.01 200);
+  --overlay: oklch(0.08 0.02 215 / 60%);
+
+  --primary: oklch(0.75 0.1 190);
+  --primary-foreground: oklch(0.18 0.03 210);
+  --secondary: oklch(0.29 0.03 210);
+  --secondary-foreground: oklch(0.95 0.01 200);
+  --muted: oklch(0.27 0.02 215);
+  --muted-foreground: oklch(0.74 0.02 205);
+  --accent: oklch(0.32 0.05 250);
+  --accent-foreground: oklch(0.92 0.03 250);
+  --link: oklch(0.8 0.08 200);
+
+  --destructive: oklch(0.7 0.17 25);
+  --destructive-foreground: oklch(0.18 0.02 215);
+  --success: oklch(0.75 0.12 155);
+  --success-foreground: oklch(0.18 0.02 215);
+  --warning: oklch(0.84 0.12 85);
+  --warning-foreground: oklch(0.25 0.05 60);
+  --info: oklch(0.74 0.1 245);
+  --info-foreground: oklch(0.18 0.02 215);
+
+  --border: oklch(1 0 0 / 11%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.75 0.1 190);
+  --selection: oklch(0.4 0.06 195);
+  --selection-foreground: oklch(0.97 0.01 200);
+
+  --chart-1: oklch(0.75 0.1 190);
+  --chart-2: oklch(0.72 0.12 255);
+  --chart-3: oklch(0.78 0.12 50);
+  --chart-4: oklch(0.74 0.11 150);
+  --chart-5: oklch(0.72 0.13 320);
+
+  --sidebar: oklch(0.17 0.02 215);
+  --sidebar-foreground: oklch(0.95 0.01 200);
+  --sidebar-primary: oklch(0.75 0.1 190);
+  --sidebar-primary-foreground: oklch(0.18 0.03 210);
+  --sidebar-accent: oklch(0.27 0.03 210);
+  --sidebar-accent-foreground: oklch(0.95 0.01 200);
+  --sidebar-border: oklch(1 0 0 / 11%);
+  --sidebar-ring: oklch(0.75 0.1 190);
+
+  --elevation-xs: 0 1px 2px 0 oklch(0 0 0 / 19%);
+  --elevation-sm: 0 2px 6px -1px oklch(0 0 0 / 32%), 0 1px 2px 0 oklch(0 0 0 / 19%);
+  --elevation-md: 0 8px 20px -6px oklch(0 0 0 / 48%), 0 2px 6px -2px oklch(0 0 0 / 22%);
+  --elevation-lg: 0 18px 36px -12px oklch(0 0 0 / 64%), 0 4px 10px -4px oklch(0 0 0 / 22%);
+  --elevation-xl: 0 32px 64px -20px oklch(0 0 0 / 86%), 0 8px 16px -8px oklch(0 0 0 / 32%);
+}

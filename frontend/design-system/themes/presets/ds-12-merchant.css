@@ -1,0 +1,153 @@
+/*
+ * DS-12 Merchant
+ * A crisp white storefront admin with a bold, confident green.
+ *
+ * This file is the editable source of truth for the preset. The light block defines every
+ * token; the dark block overrides colors and elevation.
+ * Fonts: Plus Jakarta Sans and DM Mono (SIL OFL 1.1, bundled through Fontsource).
+ */
+
+:root[data-theme='ds-12'] {
+  /* Canvas and surfaces */
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.2 0.015 160);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.2 0.015 160);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.2 0.015 160);
+  --overlay: oklch(0.15 0.02 160 / 30%);
+
+  /* Actions */
+  --primary: oklch(0.5 0.15 155);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.95 0.02 155);
+  --secondary-foreground: oklch(0.3 0.07 155);
+  --muted: oklch(0.965 0.005 155);
+  --muted-foreground: oklch(0.48 0.02 160);
+  --accent: oklch(0.95 0.05 110);
+  --accent-foreground: oklch(0.35 0.08 130);
+  --link: oklch(0.45 0.13 155);
+
+  /* Status */
+  --destructive: oklch(0.53 0.21 25);
+  --destructive-foreground: oklch(0.99 0 0);
+  --success: oklch(0.5 0.15 155);
+  --success-foreground: oklch(0.99 0 0);
+  --warning: oklch(0.8 0.16 75);
+  --warning-foreground: oklch(0.28 0.07 55);
+  --info: oklch(0.5 0.12 250);
+  --info-foreground: oklch(0.99 0 0);
+
+  /* Boundaries, focus and selection */
+  --border: oklch(0.91 0.006 155);
+  --input: oklch(0.85 0.01 155);
+  --ring: oklch(0.5 0.15 155);
+  --selection: oklch(0.9 0.08 150);
+  --selection-foreground: oklch(0.2 0.015 160);
+
+  /* Data */
+  --chart-1: oklch(0.5 0.15 155);
+  --chart-2: oklch(0.5 0.13 250);
+  --chart-3: oklch(0.58 0.15 55);
+  --chart-4: oklch(0.5 0.16 320);
+  --chart-5: oklch(0.54 0.1 200);
+
+  /* Navigation */
+  --sidebar: oklch(0.975 0.006 155);
+  --sidebar-foreground: oklch(0.2 0.015 160);
+  --sidebar-primary: oklch(0.5 0.15 155);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(0.93 0.025 155);
+  --sidebar-accent-foreground: oklch(0.25 0.06 155);
+  --sidebar-border: oklch(0.91 0.006 155);
+  --sidebar-ring: oklch(0.5 0.15 155);
+
+  /* Typography */
+  --type-display: 'Plus Jakarta Sans Variable', ui-sans-serif, system-ui, sans-serif;
+  --type-body: 'Plus Jakarta Sans Variable', ui-sans-serif, system-ui, sans-serif;
+  --type-mono: 'DM Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --type-display-weight: 700;
+  --type-display-tracking: -0.025em;
+  --type-body-tracking: 0em;
+  --type-body-leading: 1.5;
+
+  /* Shape, density and elevation */
+  --radius: 0.75rem;
+  --density: 1;
+  --elevation-xs: 0 1px 1px 0 oklch(0.2 0.03 160 / 5%);
+  --elevation-sm: 0 1px 2px 0 oklch(0.2 0.03 160 / 8%), 0 1px 3px 0 oklch(0.2 0.03 160 / 6%);
+  --elevation-md: 0 2px 4px -1px oklch(0.2 0.03 160 / 8%), 0 4px 8px -2px oklch(0.2 0.03 160 / 8%);
+  --elevation-lg:
+    0 8px 16px -4px oklch(0.2 0.03 160 / 12%), 0 2px 4px -2px oklch(0.2 0.03 160 / 6%);
+  --elevation-xl:
+    0 16px 32px -8px oklch(0.2 0.03 160 / 16%), 0 4px 8px -4px oklch(0.2 0.03 160 / 8%);
+
+  /* Motion */
+  --motion-duration-fast: 110ms;
+  --motion-duration-base: 170ms;
+  --motion-duration-slow: 280ms;
+  --motion-duration-overlay: 180ms;
+  --motion-ease-standard: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --motion-ease-enter: cubic-bezier(0, 0, 0.2, 1);
+  --motion-ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --motion-ease-emphasized: cubic-bezier(0.2, 0.9, 0.3, 1.1);
+  --motion-distance: 0.5rem;
+  --motion-scale: 0.96;
+  --motion-stagger: 35ms;
+}
+
+:root[data-theme='ds-12'].dark {
+  --background: oklch(0.17 0.015 160);
+  --foreground: oklch(0.95 0.01 155);
+  --card: oklch(0.21 0.02 160);
+  --card-foreground: oklch(0.95 0.01 155);
+  --popover: oklch(0.23 0.022 160);
+  --popover-foreground: oklch(0.95 0.01 155);
+  --overlay: oklch(0.04 0.01 160 / 60%);
+
+  --primary: oklch(0.76 0.17 152);
+  --primary-foreground: oklch(0.16 0.03 160);
+  --secondary: oklch(0.27 0.025 160);
+  --secondary-foreground: oklch(0.95 0.01 155);
+  --muted: oklch(0.25 0.02 160);
+  --muted-foreground: oklch(0.72 0.02 155);
+  --accent: oklch(0.3 0.05 130);
+  --accent-foreground: oklch(0.9 0.08 125);
+  --link: oklch(0.8 0.14 152);
+
+  --destructive: oklch(0.68 0.19 25);
+  --destructive-foreground: oklch(0.16 0.015 160);
+  --success: oklch(0.76 0.17 152);
+  --success-foreground: oklch(0.16 0.03 160);
+  --warning: oklch(0.84 0.15 80);
+  --warning-foreground: oklch(0.22 0.03 60);
+  --info: oklch(0.74 0.11 245);
+  --info-foreground: oklch(0.16 0.015 160);
+
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 14%);
+  --ring: oklch(0.76 0.17 152);
+  --selection: oklch(0.42 0.1 152);
+  --selection-foreground: oklch(0.97 0.01 155);
+
+  --chart-1: oklch(0.76 0.17 152);
+  --chart-2: oklch(0.72 0.12 250);
+  --chart-3: oklch(0.8 0.14 60);
+  --chart-4: oklch(0.7 0.16 320);
+  --chart-5: oklch(0.75 0.1 200);
+
+  --sidebar: oklch(0.14 0.015 160);
+  --sidebar-foreground: oklch(0.95 0.01 155);
+  --sidebar-primary: oklch(0.76 0.17 152);
+  --sidebar-primary-foreground: oklch(0.16 0.03 160);
+  --sidebar-accent: oklch(0.25 0.03 160);
+  --sidebar-accent-foreground: oklch(0.95 0.01 155);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.76 0.17 152);
+
+  --elevation-xs: 0 1px 1px 0 oklch(0 0 0 / 21%);
+  --elevation-sm: 0 1px 2px 0 oklch(0 0 0 / 35%), 0 1px 3px 0 oklch(0 0 0 / 24%);
+  --elevation-md: 0 2px 4px -1px oklch(0 0 0 / 35%), 0 4px 8px -2px oklch(0 0 0 / 35%);
+  --elevation-lg: 0 8px 16px -4px oklch(0 0 0 / 52%), 0 2px 4px -2px oklch(0 0 0 / 24%);
+  --elevation-xl: 0 16px 32px -8px oklch(0 0 0 / 70%), 0 4px 8px -4px oklch(0 0 0 / 35%);
+}

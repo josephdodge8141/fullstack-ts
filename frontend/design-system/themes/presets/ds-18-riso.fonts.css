@@ -1,0 +1,5 @@
+/* DS-18 Riso fonts, loaded only when the preset is active. */
+@import '@fontsource-variable/bricolage-grotesque';
+@import '@fontsource-variable/work-sans';
+@import '@fontsource/space-mono/400.css';
+@import '@fontsource/space-mono/700.css';

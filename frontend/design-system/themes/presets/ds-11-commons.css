@@ -1,0 +1,154 @@
+/*
+ * DS-11 Commons
+ * A friendly, rounded blue-violet space for shared documents and teamwork.
+ *
+ * This file is the editable source of truth for the preset. The light block defines every
+ * token; the dark block overrides colors and elevation.
+ * Fonts: Nunito and Source Code Pro (SIL OFL 1.1, bundled through Fontsource).
+ */
+
+:root[data-theme='ds-11'] {
+  /* Canvas and surfaces */
+  --background: oklch(0.985 0.006 95);
+  --foreground: oklch(0.25 0.03 275);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.25 0.03 275);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.25 0.03 275);
+  --overlay: oklch(0.25 0.04 275 / 25%);
+
+  /* Actions */
+  --primary: oklch(0.52 0.18 275);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.94 0.025 275);
+  --secondary-foreground: oklch(0.33 0.1 275);
+  --muted: oklch(0.96 0.008 95);
+  --muted-foreground: oklch(0.5 0.03 275);
+  --accent: oklch(0.94 0.035 180);
+  --accent-foreground: oklch(0.35 0.07 185);
+  --link: oklch(0.5 0.18 275);
+
+  /* Status */
+  --destructive: oklch(0.54 0.2 22);
+  --destructive-foreground: oklch(0.99 0 0);
+  --success: oklch(0.52 0.12 150);
+  --success-foreground: oklch(0.99 0 0);
+  --warning: oklch(0.82 0.14 82);
+  --warning-foreground: oklch(0.3 0.06 55);
+  --info: oklch(0.52 0.13 240);
+  --info-foreground: oklch(0.99 0 0);
+
+  /* Boundaries, focus and selection */
+  --border: oklch(0.9 0.01 95);
+  --input: oklch(0.86 0.015 95);
+  --ring: oklch(0.52 0.17 275);
+  --selection: oklch(0.9 0.06 275);
+  --selection-foreground: oklch(0.25 0.03 275);
+
+  /* Data */
+  --chart-1: oklch(0.52 0.18 275);
+  --chart-2: oklch(0.54 0.1 185);
+  --chart-3: oklch(0.58 0.15 45);
+  --chart-4: oklch(0.54 0.13 145);
+  --chart-5: oklch(0.54 0.17 340);
+
+  /* Navigation */
+  --sidebar: oklch(0.965 0.01 95);
+  --sidebar-foreground: oklch(0.25 0.03 275);
+  --sidebar-primary: oklch(0.52 0.18 275);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(0.93 0.025 275);
+  --sidebar-accent-foreground: oklch(0.3 0.1 275);
+  --sidebar-border: oklch(0.9 0.01 95);
+  --sidebar-ring: oklch(0.52 0.17 275);
+
+  /* Typography */
+  --type-display: 'Nunito Variable', ui-sans-serif, system-ui, sans-serif;
+  --type-body: 'Nunito Variable', ui-sans-serif, system-ui, sans-serif;
+  --type-mono: 'Source Code Pro Variable', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --type-display-weight: 800;
+  --type-display-tracking: -0.015em;
+  --type-body-tracking: 0.005em;
+  --type-body-leading: 1.6;
+
+  /* Shape, density and elevation */
+  --radius: 0.875rem;
+  --density: 1.02;
+  --elevation-xs: 0 1px 2px 0 oklch(0.3 0.06 275 / 4%);
+  --elevation-sm: 0 2px 6px -1px oklch(0.3 0.06 275 / 7%), 0 1px 2px 0 oklch(0.3 0.06 275 / 4%);
+  --elevation-md:
+    0 8px 20px -6px oklch(0.3 0.06 275 / 10%), 0 2px 6px -2px oklch(0.3 0.06 275 / 5%);
+  --elevation-lg:
+    0 18px 36px -12px oklch(0.3 0.06 275 / 14%), 0 4px 10px -4px oklch(0.3 0.06 275 / 5%);
+  --elevation-xl:
+    0 32px 64px -20px oklch(0.3 0.06 275 / 19%), 0 8px 16px -8px oklch(0.3 0.06 275 / 7%);
+
+  /* Motion */
+  --motion-duration-fast: 130ms;
+  --motion-duration-base: 200ms;
+  --motion-duration-slow: 340ms;
+  --motion-duration-overlay: 220ms;
+  --motion-ease-standard: cubic-bezier(0.3, 0, 0.2, 1);
+  --motion-ease-enter: cubic-bezier(0.22, 1, 0.36, 1);
+  --motion-ease-exit: cubic-bezier(0.55, 0, 1, 0.45);
+  --motion-ease-emphasized: cubic-bezier(0.34, 1.35, 0.64, 1);
+  --motion-distance: 0.625rem;
+  --motion-scale: 0.95;
+  --motion-stagger: 45ms;
+}
+
+:root[data-theme='ds-11'].dark {
+  --background: oklch(0.2 0.025 275);
+  --foreground: oklch(0.95 0.01 95);
+  --card: oklch(0.24 0.028 275);
+  --card-foreground: oklch(0.95 0.01 95);
+  --popover: oklch(0.26 0.03 275);
+  --popover-foreground: oklch(0.95 0.01 95);
+  --overlay: oklch(0.06 0.02 275 / 60%);
+
+  --primary: oklch(0.74 0.14 275);
+  --primary-foreground: oklch(0.18 0.03 275);
+  --secondary: oklch(0.3 0.04 275);
+  --secondary-foreground: oklch(0.95 0.01 95);
+  --muted: oklch(0.27 0.03 275);
+  --muted-foreground: oklch(0.74 0.03 275);
+  --accent: oklch(0.32 0.04 185);
+  --accent-foreground: oklch(0.9 0.05 185);
+  --link: oklch(0.8 0.11 275);
+
+  --destructive: oklch(0.7 0.18 22);
+  --destructive-foreground: oklch(0.18 0.03 275);
+  --success: oklch(0.76 0.13 150);
+  --success-foreground: oklch(0.18 0.03 275);
+  --warning: oklch(0.84 0.13 82);
+  --warning-foreground: oklch(0.25 0.05 55);
+  --info: oklch(0.75 0.11 240);
+  --info-foreground: oklch(0.18 0.03 275);
+
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 14%);
+  --ring: oklch(0.74 0.14 275);
+  --selection: oklch(0.42 0.1 275);
+  --selection-foreground: oklch(0.97 0.01 95);
+
+  --chart-1: oklch(0.74 0.14 275);
+  --chart-2: oklch(0.76 0.1 185);
+  --chart-3: oklch(0.8 0.13 55);
+  --chart-4: oklch(0.76 0.13 145);
+  --chart-5: oklch(0.72 0.15 340);
+
+  --sidebar: oklch(0.18 0.025 275);
+  --sidebar-foreground: oklch(0.95 0.01 95);
+  --sidebar-primary: oklch(0.74 0.14 275);
+  --sidebar-primary-foreground: oklch(0.18 0.03 275);
+  --sidebar-accent: oklch(0.28 0.04 275);
+  --sidebar-accent-foreground: oklch(0.95 0.01 95);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.74 0.14 275);
+
+  --elevation-xs: 0 1px 2px 0 oklch(0 0 0 / 21%);
+  --elevation-sm: 0 2px 6px -1px oklch(0 0 0 / 35%), 0 1px 2px 0 oklch(0 0 0 / 21%);
+  --elevation-md: 0 8px 20px -6px oklch(0 0 0 / 52%), 0 2px 6px -2px oklch(0 0 0 / 24%);
+  --elevation-lg: 0 18px 36px -12px oklch(0 0 0 / 70%), 0 4px 10px -4px oklch(0 0 0 / 24%);
+  --elevation-xl: 0 32px 64px -20px oklch(0 0 0 / 94%), 0 8px 16px -8px oklch(0 0 0 / 35%);
+}

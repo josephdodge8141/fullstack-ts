@@ -50,20 +50,30 @@ test('portaled dialog inherits the chosen preset and returns focus', async ({ pa
   await expect(page.getByRole('button', { name: 'Open preset dialog' })).toBeFocused();
 });
 
-test('open slots and corrupt preferences fall back to the default preset', async ({ page }) => {
+test('unknown saved presets fall back to the default preset', async ({ page }) => {
   await page.addInitScript(() => {
     window.localStorage.setItem(
       'design-system-preference',
-      JSON.stringify({ preset: 'ds-12', mode: 'light' }),
+      JSON.stringify({ preset: 'ds-99', mode: 'light' }),
     );
   });
   await page.goto('/design-systems');
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'ds-01');
-  await expect(
-    page
-      .getByRole('radiogroup', { name: 'Design system' })
-      .getByRole('radio', { name: 'Open slot DS-12', exact: true }),
-  ).toBeDisabled();
+});
+
+test('dark-first presets open dark unless a mode was chosen', async ({ page }) => {
+  await page.goto('/design-systems');
+  const picker = page.getByRole('radiogroup', { name: 'Design system' });
+  const html = page.locator('html');
+  await picker.getByRole('radio', { name: 'Aurora', exact: true }).check();
+  await expect(html).toHaveClass(/(^|\s)dark(\s|$)/);
+  await picker.getByRole('radio', { name: 'Grove', exact: true }).check();
+  await expect(html).not.toHaveClass(/(^|\s)dark(\s|$)/);
+  const modes = page.getByRole('radiogroup', { name: 'Color mode' });
+  await modes.getByRole('radio', { name: 'Dark', exact: true }).check();
+  await modes.getByRole('radio', { name: 'Light', exact: true }).check();
+  await picker.getByRole('radio', { name: 'Relay', exact: true }).check();
+  await expect(html).not.toHaveClass(/(^|\s)dark(\s|$)/);
 });
 
 test('gallery has no horizontal overflow on a narrow viewport', async ({ page }) => {

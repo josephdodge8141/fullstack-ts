@@ -1,6 +1,6 @@
 # Twenty design-system briefs: conversation and delivery plan
 
-Status: **four introductory presets preview-ready, sixteen slots open**, 2026-09-25. This is the specification for developing twenty distinct experiences. DS-01 to DS-04 are deliberately basic starting points for the conversation, not approved briefs. Their executable tokens live in `frontend/design-system/themes/presets`, their brief metadata in `frontend/design-system/themes/registry.ts`, and the live preview at `/design-systems`.
+Status: **all twenty presets preview-ready**, 2026-09-25. DS-01 to DS-04 are introductory baselines; DS-05 to DS-12 target SaaS products and DS-13 to DS-20 are exploratory. Five presets are dark-first. Executable tokens live in `frontend/design-system/themes/presets`, brief metadata in `frontend/design-system/themes/registry.ts`, and the live preview at `/design-systems`. None is approved until the owner reviews it.
 
 ## Purpose and boundaries
 
@@ -68,35 +68,36 @@ Only the **brief** carries subjective intent; CSS files carry executable values.
 
 ## Slot ledger
 
-| ID    | Working name | Experience description                                                      | Status        |
-| ----- | ------------ | --------------------------------------------------------------------------- | ------------- |
-| DS-01 | Foundation   | Quiet neutral baseline; Geist; standard motion                              | Preview-ready |
-| DS-02 | Harbor       | Crisp blue product workspace; IBM Plex; dense, tight radius                 | Preview-ready |
-| DS-03 | Hearth       | Warm editorial cream and terracotta; Fraunces and DM Sans; soft, slow       | Preview-ready |
-| DS-04 | Signal       | High-contrast technical console; JetBrains Mono; square, hard shadows, fast | Preview-ready |
-| DS-05 | Open         | Open                                                                        | Open          |
-| DS-06 | Open         | Open                                                                        | Open          |
-| DS-07 | Open         | Open                                                                        | Open          |
-| DS-08 | Open         | Open                                                                        | Open          |
-| DS-09 | Open         | Open                                                                        | Open          |
-| DS-10 | Open         | Open                                                                        | Open          |
-| DS-11 | Open         | Open                                                                        | Open          |
-| DS-12 | Open         | Open                                                                        | Open          |
-| DS-13 | Open         | Open                                                                        | Open          |
-| DS-14 | Open         | Open                                                                        | Open          |
-| DS-15 | Open         | Open                                                                        | Open          |
-| DS-16 | Open         | Open                                                                        | Open          |
-| DS-17 | Open         | Open                                                                        | Open          |
-| DS-18 | Open         | Open                                                                        | Open          |
-| DS-19 | Open         | Open                                                                        | Open          |
-| DS-20 | Open         | Open                                                                        | Open          |
+| ID    | Working name | Experience description                                                                      | Status        |
+| ----- | ------------ | ------------------------------------------------------------------------------------------- | ------------- |
+| DS-01 | Foundation   | Quiet neutral baseline; Geist; standard motion                                              | Preview-ready |
+| DS-02 | Harbor       | Crisp blue product workspace; IBM Plex; dense, tight radius                                 | Preview-ready |
+| DS-03 | Hearth       | Warm editorial cream and terracotta; Fraunces and DM Sans; soft, slow                       | Preview-ready |
+| DS-04 | Signal       | High-contrast technical console; JetBrains Mono; square, hard shadows, fast                 | Preview-ready |
+| DS-05 | Ledger       | SaaS fintech: navy and emerald, navy sidebar, tabular numbers; Manrope, Roboto Mono         | Preview-ready |
+| DS-06 | Clinic       | SaaS healthcare: calm teal, larger type and targets; Atkinson Hyperlegible                  | Preview-ready |
+| DS-07 | Atlas        | SaaS enterprise data: steel slate, tightest density; Inter Tight, Inter, Fira Code          | Preview-ready |
+| DS-08 | Pulse        | Dark-first SaaS analytics: violet and cyan glow on indigo; Sora, Martian Mono               | Preview-ready |
+| DS-09 | Relay        | Dark-first developer platform: graphite and safety orange, line elevation; Chivo            | Preview-ready |
+| DS-10 | Studio       | Dark-first creative tools: neutral charcoal, magenta; Outfit, Figtree                       | Preview-ready |
+| DS-11 | Commons      | SaaS collaboration: warm off-white, blue-violet, rounded; Nunito                            | Preview-ready |
+| DS-12 | Merchant     | SaaS commerce admin: crisp white, bold green; Plus Jakarta Sans, DM Mono                    | Preview-ready |
+| DS-13 | Folio        | Exploratory editorial: ink on paper, hairline rules; Playfair Display, Source Serif 4       | Preview-ready |
+| DS-14 | Aurora       | Dark-first exploratory: glassy night, teal and violet glow; Unbounded, Albert Sans          | Preview-ready |
+| DS-15 | Grove        | Exploratory nature: moss, sand and clay; Lora, Source Sans 3                                | Preview-ready |
+| DS-16 | Arcade       | Exploratory playful: pastels, pill shapes, springy motion; Fredoka, Quicksand               | Preview-ready |
+| DS-17 | Noir         | Dark-first luxury: near-black, ivory and gold, slow motion; Cormorant, Jost                 | Preview-ready |
+| DS-18 | Riso         | Exploratory print: blue and fluorescent pink inks, pink offset shadows; Bricolage Grotesque | Preview-ready |
+| DS-19 | Blueprint    | Exploratory technical: drafting paper, white-on-blueprint dark mode; Azeret Mono, Archivo   | Preview-ready |
+| DS-20 | Brutal       | Exploratory neo-brutalist: yellow canvas, black ink, chunky shadows; Rubik                  | Preview-ready |
 
 ## Implementation notes
 
 - `frontend/design-system/themes/main.css` is the single Tailwind entry. It maps every contract token into `@theme inline`, remaps the fixed base set's hard-coded durations, zoom, backdrops and slider thumb onto tokens, and imports each preset file.
 - Preset colors for all selectable presets ship in the main stylesheet (small, and needed for flash-free restore). Non-default font families load lazily from `presets/*.fonts.css` only when their preset is active.
 - `frontend/design-system/themes/presets.test.ts` enforces brief/file parity, `main.css` imports and full token coverage. The `design-systems` Cucumber feature verifies selection, dark mode, persistence, corrupt and open-slot fallback, overlay inheritance, token resolution and motion in the browser.
-- Contrast evidence and WCAG measurements are not yet recorded for DS-01 to DS-04; they are required before any is marked approved.
+- `frontend/design-system/themes/contrast.test.ts` gates WCAG 2.2 contrast for every preset in light and dark: 4.5:1 for text pairs (foreground, card, popover, primary, secondary, muted, accent, status, link, selection and sidebar pairs) and 3:1 for the focus ring and chart series. `--border` and `--input` hairlines are a documented exception. All twenty pass. Large text, disabled states and screen-reader review are still manual.
+- Dark-first presets declare `defaultMode: 'dark'` in the registry. Choosing one switches to dark until the person picks a mode; an explicit choice is remembered (`explicitMode`).
 
 ## Cross-preset quality bar
 
