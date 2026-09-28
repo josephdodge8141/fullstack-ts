@@ -93,6 +93,7 @@ export function ComponentCatalogPage(): React.JSX.Element {
           ['Input patterns', '/components/inputs'],
           ['Workspace layout', '/components/layouts'],
           ['Page layout gallery', '/components/layout-gallery'],
+          ['Design systems', '/design-systems'],
         ].map(([label, href]) => (
           <a
             key={href}

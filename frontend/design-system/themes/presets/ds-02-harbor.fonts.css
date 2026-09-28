@@ -1,0 +1,4 @@
+/* DS-02 Harbor fonts, loaded only when the preset is active. */
+@import '@fontsource-variable/ibm-plex-sans';
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/500.css';

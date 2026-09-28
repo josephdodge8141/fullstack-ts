@@ -46,3 +46,14 @@ export {
   type ErrorResponse,
 } from './schemas/error.js';
 export { healthResponseSchema, type HealthResponse } from './schemas/health.js';
+export {
+  colorModeSchema,
+  designSystemIdSchema,
+  designSystemIds,
+  designSystemPreferenceSchema,
+  designSystemStatusSchema,
+  type ColorMode,
+  type DesignSystemId,
+  type DesignSystemPreference,
+  type DesignSystemStatus,
+} from './schemas/design-system.js';

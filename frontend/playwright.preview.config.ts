@@ -7,6 +7,6 @@ if (baseURL === undefined || !baseURL.startsWith('https://')) {
 
 export default defineConfig({
   testDir: './e2e',
-  testMatch: '**/public.spec.ts',
+  testMatch: '**/*.spec.ts',
   use: { baseURL },
 });

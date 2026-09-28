@@ -1,0 +1,154 @@
+/*
+ * DS-02 Harbor
+ * A crisp, trustworthy blue workspace tuned for dense product screens.
+ *
+ * This file is the editable source of truth for the preset. The light block defines every
+ * token; the dark block overrides colors and elevation.
+ * Fonts: IBM Plex Sans and IBM Plex Mono (SIL OFL 1.1, bundled through Fontsource).
+ */
+
+:root[data-theme='ds-02'] {
+  /* Canvas and surfaces */
+  --background: oklch(0.985 0.003 247);
+  --foreground: oklch(0.21 0.034 264.665);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.21 0.034 264.665);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.21 0.034 264.665);
+  --overlay: oklch(0.2 0.04 265 / 30%);
+
+  /* Actions */
+  --primary: oklch(0.488 0.217 264);
+  --primary-foreground: oklch(0.985 0.01 250);
+  --secondary: oklch(0.94 0.02 250);
+  --secondary-foreground: oklch(0.3 0.06 260);
+  --muted: oklch(0.955 0.01 250);
+  --muted-foreground: oklch(0.5 0.03 257);
+  --accent: oklch(0.93 0.035 245);
+  --accent-foreground: oklch(0.3 0.09 260);
+  --link: oklch(0.5 0.2 262);
+
+  /* Status */
+  --destructive: oklch(0.55 0.22 25);
+  --destructive-foreground: oklch(0.99 0 0);
+  --success: oklch(0.52 0.13 160);
+  --success-foreground: oklch(0.99 0 0);
+  --warning: oklch(0.78 0.16 75);
+  --warning-foreground: oklch(0.3 0.07 50);
+  --info: oklch(0.52 0.14 235);
+  --info-foreground: oklch(0.99 0 0);
+
+  /* Boundaries, focus and selection */
+  --border: oklch(0.9 0.015 250);
+  --input: oklch(0.85 0.022 250);
+  --ring: oklch(0.6 0.19 260);
+  --selection: oklch(0.88 0.06 250);
+  --selection-foreground: oklch(0.21 0.034 264.665);
+
+  /* Data */
+  --chart-1: oklch(0.55 0.2 262);
+  --chart-2: oklch(0.65 0.13 200);
+  --chart-3: oklch(0.68 0.15 160);
+  --chart-4: oklch(0.75 0.14 85);
+  --chart-5: oklch(0.6 0.2 300);
+
+  /* Navigation */
+  --sidebar: oklch(0.2 0.04 264);
+  --sidebar-foreground: oklch(0.93 0.015 250);
+  --sidebar-primary: oklch(0.68 0.16 255);
+  --sidebar-primary-foreground: oklch(0.18 0.03 262);
+  --sidebar-accent: oklch(0.28 0.05 262);
+  --sidebar-accent-foreground: oklch(0.97 0.01 250);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.68 0.16 255);
+
+  /* Typography */
+  --type-display: 'IBM Plex Sans Variable', ui-sans-serif, system-ui, sans-serif;
+  --type-body: 'IBM Plex Sans Variable', ui-sans-serif, system-ui, sans-serif;
+  --type-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --type-display-weight: 600;
+  --type-display-tracking: -0.015em;
+  --type-body-tracking: 0em;
+  --type-body-leading: 1.45;
+
+  /* Shape, density and elevation */
+  --radius: 0.375rem;
+  --density: 0.92;
+  --elevation-xs: 0 1px 1px 0 oklch(0.25 0.05 262 / 6%);
+  --elevation-sm: 0 1px 2px 0 oklch(0.25 0.05 262 / 8%), 0 1px 3px 0 oklch(0.25 0.05 262 / 6%);
+  --elevation-md:
+    0 2px 4px -1px oklch(0.25 0.05 262 / 8%), 0 4px 8px -2px oklch(0.25 0.05 262 / 8%);
+  --elevation-lg:
+    0 8px 16px -4px oklch(0.25 0.05 262 / 12%), 0 2px 4px -2px oklch(0.25 0.05 262 / 6%);
+  --elevation-xl:
+    0 16px 32px -8px oklch(0.25 0.05 262 / 16%), 0 4px 8px -4px oklch(0.25 0.05 262 / 8%);
+
+  /* Motion */
+  --motion-duration-fast: 90ms;
+  --motion-duration-base: 140ms;
+  --motion-duration-slow: 240ms;
+  --motion-duration-overlay: 140ms;
+  --motion-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --motion-ease-enter: cubic-bezier(0, 0, 0, 1);
+  --motion-ease-exit: cubic-bezier(0.3, 0, 1, 1);
+  --motion-ease-emphasized: cubic-bezier(0.3, 0, 0, 1);
+  --motion-distance: 0.375rem;
+  --motion-scale: 0.97;
+  --motion-stagger: 30ms;
+}
+
+:root[data-theme='ds-02'].dark {
+  --background: oklch(0.18 0.025 262);
+  --foreground: oklch(0.96 0.01 250);
+  --card: oklch(0.22 0.03 262);
+  --card-foreground: oklch(0.96 0.01 250);
+  --popover: oklch(0.24 0.032 262);
+  --popover-foreground: oklch(0.96 0.01 250);
+  --overlay: oklch(0.05 0.02 265 / 65%);
+
+  --primary: oklch(0.68 0.16 255);
+  --primary-foreground: oklch(0.18 0.03 262);
+  --secondary: oklch(0.28 0.035 262);
+  --secondary-foreground: oklch(0.96 0.01 250);
+  --muted: oklch(0.26 0.03 262);
+  --muted-foreground: oklch(0.72 0.03 255);
+  --accent: oklch(0.3 0.05 260);
+  --accent-foreground: oklch(0.96 0.01 250);
+  --link: oklch(0.74 0.14 250);
+
+  --destructive: oklch(0.68 0.19 22);
+  --destructive-foreground: oklch(0.18 0.03 262);
+  --success: oklch(0.72 0.15 160);
+  --success-foreground: oklch(0.18 0.03 262);
+  --warning: oklch(0.82 0.15 80);
+  --warning-foreground: oklch(0.25 0.05 60);
+  --info: oklch(0.72 0.12 230);
+  --info-foreground: oklch(0.18 0.03 262);
+
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.68 0.16 255);
+  --selection: oklch(0.4 0.1 260);
+  --selection-foreground: oklch(0.98 0.005 250);
+
+  --chart-1: oklch(0.68 0.16 255);
+  --chart-2: oklch(0.72 0.12 200);
+  --chart-3: oklch(0.75 0.14 160);
+  --chart-4: oklch(0.82 0.14 85);
+  --chart-5: oklch(0.7 0.17 300);
+
+  --sidebar: oklch(0.15 0.025 262);
+  --sidebar-foreground: oklch(0.93 0.015 250);
+  --sidebar-primary: oklch(0.68 0.16 255);
+  --sidebar-primary-foreground: oklch(0.18 0.03 262);
+  --sidebar-accent: oklch(0.26 0.04 262);
+  --sidebar-accent-foreground: oklch(0.97 0.01 250);
+  --sidebar-border: oklch(1 0 0 / 8%);
+  --sidebar-ring: oklch(0.68 0.16 255);
+
+  --elevation-xs: 0 1px 1px 0 oklch(0 0 0 / 30%);
+  --elevation-sm: 0 1px 2px 0 oklch(0 0 0 / 35%), 0 1px 3px 0 oklch(0 0 0 / 25%);
+  --elevation-md: 0 2px 4px -1px oklch(0 0 0 / 40%), 0 4px 8px -2px oklch(0 0 0 / 30%);
+  --elevation-lg: 0 8px 16px -4px oklch(0 0 0 / 45%), 0 2px 4px -2px oklch(0 0 0 / 30%);
+  --elevation-xl: 0 16px 32px -8px oklch(0 0 0 / 55%), 0 4px 8px -4px oklch(0 0 0 / 35%);
+}

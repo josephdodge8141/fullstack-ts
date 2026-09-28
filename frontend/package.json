@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc -b && vite build",
     "dev": "vite --port 4173",
-    "test:unit": "node --import tsx --test services/*.test.ts",
+    "test:unit": "node --import tsx --test services/*.test.ts design-system/themes/*.test.ts",
     "test:browser": "npm --prefix .. run build:contracts && npm --prefix .. run build -w @app/backend && npm run build && playwright test",
     "test:browser:compose": "playwright test --config playwright.compose.config.ts",
     "test:browser:preview": "playwright test --config playwright.preview.config.ts",
@@ -16,7 +16,14 @@
   "dependencies": {
     "@app/schemas": "0.1.0",
     "@base-ui/react": "1.8.0",
+    "@fontsource-variable/dm-sans": "5.3.0",
+    "@fontsource-variable/fraunces": "5.3.0",
     "@fontsource-variable/geist": "5.3.0",
+    "@fontsource-variable/geist-mono": "5.3.0",
+    "@fontsource-variable/ibm-plex-sans": "5.3.0",
+    "@fontsource-variable/jetbrains-mono": "5.3.0",
+    "@fontsource-variable/space-grotesk": "5.3.0",
+    "@fontsource/ibm-plex-mono": "5.3.0",
     "@shadcn/react": "0.3.1",
     "@tailwindcss/vite": "4.3.3",
     "class-variance-authority": "0.7.1",
