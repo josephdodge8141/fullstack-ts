@@ -7,6 +7,7 @@ const SKIPPED_DIRECTORIES = new Set([
   '.agents',
   '.claude',
   '.git',
+  '.expo',
   'artifacts',
   'cdk.out',
   'dist',
@@ -21,6 +22,7 @@ const BACKEND_LAYERS: Readonly<Record<string, number>> = {
   routes: 3,
 };
 const REQUIRED_PROJECTS = ['backend', 'frontend', 'infra', 'packages/zod', 'packages/cucumber'];
+const COVERED_PROJECTS = [...REQUIRED_PROJECTS, 'mobile'];
 const ROOT_SOURCE_FILES = {
   backend: [
     'app.test.ts',
@@ -37,6 +39,14 @@ const ROOT_SOURCE_FILES = {
     'playwright.compose.config.ts',
     'playwright.preview.config.ts',
     'vite.config.ts',
+  ],
+  mobile: [
+    'App.tsx',
+    'WebApp.tsx',
+    'index.ts',
+    'metro.config.js',
+    'playwright.config.ts',
+    'postcss.config.mjs',
   ],
   infra: [],
   'packages/zod': ['index.ts', 'server.ts'],
@@ -107,6 +117,7 @@ function knownDirectoryError(file: string): string[] {
       'steps',
       'utils',
     ]);
+  if (parts[0] === 'mobile') return knownChild(file, parts, ROOT_SOURCE_FILES.mobile, ['e2e']);
   if (parts[0] === 'infra')
     return knownChild(file, parts, ROOT_SOURCE_FILES.infra, ['foundation', 'runtime']);
   if (parts[0] === 'packages' && parts[1] === 'zod')
@@ -194,7 +205,7 @@ async function projectCoverageErrors(root: string, files: readonly string[]): Pr
 
 function projectFor(file: string): string | undefined {
   if (file === 'eslint.config.ts' || file.startsWith('tooling/')) return 'tsconfig.tooling.json';
-  for (const project of REQUIRED_PROJECTS) {
+  for (const project of COVERED_PROJECTS) {
     if (file.startsWith(`${project}/`)) return `${project}/tsconfig.json`;
   }
   return undefined;

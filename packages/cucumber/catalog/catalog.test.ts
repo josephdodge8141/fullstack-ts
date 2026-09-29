@@ -45,6 +45,8 @@ test('canonical feature files are the catalog source rather than copied text', a
       'public.ui-catalog',
       'public.ui-disabled',
       'public.hello',
+      'public.demo-navigation::component-library',
+      'public.demo-navigation::design-systems',
       'public.health',
       'public.no-account-controls',
       'public.no-auth-route',

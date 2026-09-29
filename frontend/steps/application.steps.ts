@@ -6,6 +6,7 @@ import { chromium, expect, type Browser, type BrowserContext, type Page } from '
 import { designSystems, requiredTokens, selectableIds } from '../design-system/themes/registry.js';
 
 const baseUrl = process.env.COMPOSE_BASE_URL ?? 'http://app.localhost:8088';
+const apiBaseUrl = process.env.APPLICATION_API_BASE_URL ?? baseUrl;
 
 class FrontendWorld extends World {
   browser: Browser | undefined;
@@ -34,13 +35,17 @@ After(async function (this: FrontendWorld) {
 });
 
 Given('the public starter is running', async function (this: FrontendWorld) {
-  assert.equal((await this.currentPage().request.get('/api/v1/health')).status(), 200);
+  assert.equal((await this.currentPage().request.get(`${apiBaseUrl}/api/v1/health`)).status(), 200);
 });
 
 Given('I am not signed in', function () {});
 
 When('I open the application', async function (this: FrontendWorld) {
   await this.currentPage().goto('/');
+});
+
+When('I follow the {string} demo link', async function (this: FrontendWorld, name: string) {
+  await this.currentPage().getByRole('link', { name }).click();
 });
 
 When('I open the component catalog', async function (this: FrontendWorld) {
@@ -173,7 +178,7 @@ Then(
 );
 
 When('I request the public health endpoint', async function (this: FrontendWorld) {
-  const response = await this.currentPage().request.get('/api/v1/health');
+  const response = await this.currentPage().request.get(`${apiBaseUrl}/api/v1/health`);
   this.responseStatus = response.status();
   this.responseBody = await response.json();
 });

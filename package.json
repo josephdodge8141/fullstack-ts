@@ -10,14 +10,15 @@
   "workspaces": [
     "backend",
     "frontend",
+    "mobile",
     "infra",
     "packages/zod",
     "packages/cucumber"
   ],
   "scripts": {
     "build:contracts": "npm run build -w @app/schemas && npm run build -w @app/behaviors",
-    "build": "npm run build:contracts && npm run build -w @app/backend && npm run build -w @app/frontend && npm run build -w @app/infra",
-    "typecheck": "tsc -b && tsc --project tsconfig.tooling.json --noEmit",
+    "build": "npm run build:contracts && npm run build -w @app/backend && npm run build -w @app/frontend && npm run build -w @app/mobile && npm run build -w @app/infra",
+    "typecheck": "tsc -b && tsc --project mobile/tsconfig.json --noEmit && tsc --project tsconfig.tooling.json --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint . --max-warnings 0",
@@ -30,7 +31,7 @@
     "proof:docker": "node --import tsx tooling/factory/package.ts --proof --docker",
     "test:catalog": "node --import tsx --test packages/cucumber/catalog/*.test.ts",
     "test:schemas": "node --import tsx --test packages/zod/schemas/*.test.ts",
-    "check": "npm run build && npm run format:check && npm run lint && npm run typecheck && npm run test:instructions && npm run test:source && npm run test:catalog && npm run test:schemas && npm run test:factory && npm run test:backend && npm run test:behaviors:backend && npm run test:frontend:unit && npm run test:frontend:browser && npm run test:infra && npm run synth:foundation && npm run instructions:check && npm run source:check && npm run behaviors:check",
+    "check": "npm run build && npm run format:check && npm run lint && npm run typecheck && npm run test:instructions && npm run test:source && npm run test:catalog && npm run test:schemas && npm run test:factory && npm run test:backend && npm run test:behaviors:backend && npm run test:frontend:unit && npm run test:frontend:browser && npm run test:mobile:browser && npm run test:infra && npm run synth:foundation && npm run instructions:check && npm run source:check && npm run behaviors:check",
     "test:instructions": "node --import tsx --test tooling/gates/instructions.test.ts",
     "test:source": "node --import tsx --test tooling/gates/source-policy.test.ts",
     "test:infra": "node --import tsx --test infra/**/*.test.ts infra/foundation/application/*.test.ts",
@@ -40,6 +41,8 @@
     "test:behaviors:frontend:compose": "npm run test:behaviors:compose -w @app/frontend",
     "test:frontend:unit": "npm run test:unit -w @app/frontend",
     "test:frontend:browser": "npm run test:browser -w @app/frontend",
+    "test:mobile:browser": "npm run test:browser -w @app/mobile",
+    "test:behaviors:mobile": "npm run test:behaviors -w @app/mobile",
     "test:behaviors:frontend:preview": "node --import tsx packages/cucumber/catalog/run-layer.ts frontend frontend/steps/application.steps.ts"
   },
   "devDependencies": {
@@ -62,6 +65,8 @@
     "globals": "17.12.0",
     "jiti": "2.7.0",
     "prettier": "3.9.6",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
     "shadcn": "4.21.0",
     "tsx": "4.23.13",
     "typescript": "5.9.3",

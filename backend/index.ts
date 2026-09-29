@@ -90,7 +90,14 @@ export async function startServer(
   };
 
   try {
-    const createdServer = createServer(createApp({ connections }));
+    const createdServer = createServer(
+      createApp({
+        connections,
+        ...(environment.expoWebOrigin === undefined
+          ? {}
+          : { expoWebOrigin: environment.expoWebOrigin }),
+      }),
+    );
     server = createdServer;
     await new Promise<void>((resolve, reject) => {
       const onError = (error: Error): void => reject(error);

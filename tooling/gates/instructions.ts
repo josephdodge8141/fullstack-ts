@@ -27,6 +27,7 @@ export const governedFolders = [
   'frontend/services',
   'frontend/utils',
   'infra',
+  'mobile',
   'packages',
   'packages/cucumber',
   'packages/zod',

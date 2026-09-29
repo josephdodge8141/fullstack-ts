@@ -4,7 +4,7 @@ import { HomePage, type HomePageProps } from './pages/HomePage.js';
 import { ComponentCatalogPage } from './pages/ComponentCatalogPage.js';
 import { fetchHealth } from './services/health.js';
 
-export type AppProps = HomePageProps;
+export type AppProps = HomePageProps & { readonly pathname?: string };
 
 const ComponentSystemPage = lazy(async () => {
   const module = await import('./pages/ComponentSystemPage.js');
@@ -16,16 +16,19 @@ const DesignSystemsPage = lazy(async () => {
   return { default: module.DesignSystemsPage };
 });
 
-export function App({ healthClient = fetchHealth }: AppProps): React.JSX.Element {
-  if (window.location.pathname === '/components') return <ComponentCatalogPage />;
-  if (window.location.pathname === '/design-systems') {
+export function App({
+  healthClient = fetchHealth,
+  pathname = window.location.pathname,
+}: AppProps): React.JSX.Element {
+  if (pathname === '/components') return <ComponentCatalogPage />;
+  if (pathname === '/design-systems') {
     return (
       <Suspense fallback={<p role="status">Loading design systems</p>}>
         <DesignSystemsPage />
       </Suspense>
     );
   }
-  if (window.location.pathname.startsWith('/components/')) {
+  if (pathname.startsWith('/components/')) {
     return (
       <Suspense fallback={<p role="status">Loading components</p>}>
         <ComponentSystemPage />

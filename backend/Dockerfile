@@ -4,6 +4,7 @@ WORKDIR /app
 COPY package.json package-lock.json tsconfig.base.json tsconfig.json ./
 COPY backend ./backend
 COPY frontend/package.json ./frontend/package.json
+COPY mobile/package.json ./mobile/package.json
 COPY infra/package.json ./infra/package.json
 COPY packages ./packages
 RUN npm ci
@@ -15,6 +16,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY backend/package.json ./backend/package.json
 COPY frontend/package.json ./frontend/package.json
+COPY mobile/package.json ./mobile/package.json
 COPY infra/package.json ./infra/package.json
 COPY packages/zod/package.json ./packages/zod/package.json
 COPY packages/cucumber/package.json ./packages/cucumber/package.json

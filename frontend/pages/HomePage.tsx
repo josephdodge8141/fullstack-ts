@@ -46,6 +46,14 @@ export function HomePage({ healthClient = fetchHealth }: HomePageProps): React.J
         <p className="eyebrow">A calm place to begin</p>
         <h1 id="welcome-heading">Hello World</h1>
         <p className="intro">Your new workspace is ready.</p>
+        <nav className="account-actions" aria-label="Explore demos">
+          <a className="button button-primary" href="/components">
+            Component library
+          </a>
+          <a className="button button-secondary" href="/design-systems">
+            Design systems
+          </a>
+        </nav>
         <p className="health-status" role="status" aria-live="polite">
           {healthLabel}
         </p>

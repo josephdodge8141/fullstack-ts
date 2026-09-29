@@ -72,6 +72,22 @@ test('factory normalization uses factoryApplicable and represents other catalog 
   assert.deepEqual(result.counts, { expected: 4, exercised: 2, noop: 2 });
 });
 
+test('mobile normalization exercises every frontend-applicable case and preserves justified no-ops', async () => {
+  const envelopes = await runCucumberMessages({ 'application/sample.feature': applicationSource });
+  const result = normalizeLayerResults(catalog, 'mobile', envelopes);
+
+  assert.equal(result.layer, 'mobile');
+  assert.deepEqual(
+    result.exercised.map((entry) => entry.caseId),
+    ['app.one', 'app.two'],
+  );
+  assert.deepEqual(
+    result.noops.map((entry) => entry.caseId),
+    ['factory.one', 'factory.two'],
+  );
+  assert.deepEqual(result.counts, { expected: 4, exercised: 2, noop: 2 });
+});
+
 test('factory omission, duplication, extra cases, and non-passing status are rejected', async () => {
   const missing = await runCucumberMessages({
     'factory/sample.feature': factorySource.replace(/\n {2}@id:factory\.two[\s\S]*$/, '\n'),
