@@ -138,9 +138,14 @@ function isExitCode(error: unknown, code: number): boolean {
   return typeof error === 'object' && error !== null && 'code' in error && error.code === code;
 }
 
-async function run(command: string, args: readonly string[], cwd: string): Promise<void> {
+async function run(
+  command: string,
+  args: readonly string[],
+  cwd: string,
+  env: NodeJS.ProcessEnv = process.env,
+): Promise<void> {
   await new Promise<void>((resolve, reject) => {
-    const child = spawn(command, [...args], { cwd, stdio: 'inherit' });
+    const child = spawn(command, [...args], { cwd, env, stdio: 'inherit' });
     child.once('error', reject);
     child.once('exit', (code, signal) => {
       if (code === 0) resolve();
@@ -148,6 +153,12 @@ async function run(command: string, args: readonly string[], cwd: string): Promi
         reject(new Error(`${command} exited with ${String(code)}${signal ? ` (${signal})` : ''}`));
     });
   });
+}
+
+export function composeProofBaseUrl(env: NodeJS.ProcessEnv): string {
+  const port = Number(env.APP_PORT ?? '8088');
+  if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('invalid APP_PORT');
+  return `http://app.localhost:${String(port)}`;
 }
 
 async function cleanCloneProof(withDocker: boolean): Promise<void> {
@@ -167,15 +178,15 @@ async function cleanCloneProof(withDocker: boolean): Promise<void> {
 
 async function dockerProof(clone: string): Promise<void> {
   const project = `fullstack-ts-proof-${process.pid}`;
+  const baseUrl = composeProofBaseUrl(process.env);
+  const browserEnv = { ...process.env, COMPOSE_BASE_URL: baseUrl };
   let proofFailure: unknown;
   try {
     await run('docker', ['compose', '--project-name', project, 'up', '--build', '-d'], clone);
-    await waitForResponse('http://app.localhost:8088/', (body) => body.includes('id="root"'));
-    await waitForResponse('http://app.localhost:8088/api/v1/health', (body) =>
-      body.includes('"status":"ok"'),
-    );
-    await run('npm', ['run', 'test:behaviors:frontend:compose'], clone);
-    await run('npm', ['run', 'test:browser:compose', '-w', '@app/frontend'], clone);
+    await waitForResponse(`${baseUrl}/`, (body) => body.includes('id="root"'));
+    await waitForResponse(`${baseUrl}/api/v1/health`, (body) => body.includes('"status":"ok"'));
+    await run('npm', ['run', 'test:behaviors:frontend:compose'], clone, browserEnv);
+    await run('npm', ['run', 'test:browser:compose', '-w', '@app/frontend'], clone, browserEnv);
   } catch (error: unknown) {
     proofFailure = error;
   }
