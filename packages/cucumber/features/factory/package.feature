@@ -1,6 +1,15 @@
 Feature: Public factory package
   The reusable starter exports a deterministic clean clone from reviewed repository source.
 
+  @id:factory.package.compose-proof-port @backend-noop @frontend-noop @browser-noop-eligible
+  Scenario: Run a Docker proof without taking an occupied host port
+    backend-noop: Proof port selection is repository tooling outside backend requests.
+    frontend-noop: Proof port selection is repository tooling outside frontend interaction.
+    browser-noop: The proof is checked by factory tooling before an app is exposed.
+    Given another local application uses the default Compose host port
+    When the factory runs the Docker proof with a configured host port
+    Then the proof uses that host port for Compose health and browser checks
+
   @id:factory.package.design-system @backend-noop @frontend-noop @browser-noop-eligible
   Scenario: Export the complete curated component extensions
     backend-noop: Design-system packaging is factory behavior outside backend requests.

@@ -7,11 +7,18 @@ import test from 'node:test';
 import { promisify } from 'node:util';
 
 import {
+  composeProofBaseUrl,
   exportFactory,
   validateDesignSystem,
   validateExportManifest,
   validateUiFoundation,
 } from './package.js';
+
+test('factory.package.compose-proof-port uses the configured host port', () => {
+  assert.equal(composeProofBaseUrl({ APP_PORT: '18089' }), 'http://app.localhost:18089');
+  assert.equal(composeProofBaseUrl({}), 'http://app.localhost:8088');
+  assert.throws(() => composeProofBaseUrl({ APP_PORT: 'zero' }), /invalid APP_PORT/);
+});
 
 test('the factory includes the pinned UI foundation', async () => {
   const root = path.resolve(import.meta.dirname, '../..');
