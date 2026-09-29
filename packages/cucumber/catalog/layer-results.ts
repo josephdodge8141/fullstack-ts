@@ -57,7 +57,7 @@ export function normalizeLayerResults(
         ? catalogCase.factoryApplicable
           ? undefined
           : FACTORY_NOOP_REASON
-        : catalogCase.noops[layer];
+        : catalogCase.noops[layer === 'mobile' ? 'frontend' : layer];
     return reason === undefined ? [] : [{ caseId: catalogCase.id, reason }];
   });
   const noopIds = new Set(noops.map((entry) => entry.caseId));

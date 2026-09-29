@@ -13,8 +13,12 @@ const makeConnections = (overrides: Partial<Connections> = {}): Connections => (
 
 const listenForTest = async (
   connections: Connections = createConnections(),
+  expoWebOrigin?: string,
 ): Promise<{ baseUrl: string; close: () => Promise<void> }> => {
-  const server = createApp({ connections }).listen(0);
+  const server = createApp({
+    connections,
+    ...(expoWebOrigin === undefined ? {} : { expoWebOrigin }),
+  }).listen(0);
   await once(server, 'listening');
   const address = server.address();
   assert.ok(address !== null && typeof address === 'object');
@@ -34,6 +38,24 @@ test('public health returns the exact shared response shape', async () => {
     const response = await fetch(`${app.baseUrl}/api/v1/health`);
     assert.equal(response.status, 200);
     assert.deepEqual(await response.json(), { status: 'ok' });
+  } finally {
+    await app.close();
+  }
+});
+
+test('Expo web origin can reach the shared backend while other origins receive no CORS grant', async () => {
+  const allowedOrigin = 'http://127.0.0.1:8081';
+  const app = await listenForTest(createConnections(), allowedOrigin);
+  try {
+    const allowed = await fetch(`${app.baseUrl}/api/v1/health`, {
+      headers: { Origin: allowedOrigin },
+    });
+    assert.equal(allowed.status, 200);
+    assert.equal(allowed.headers.get('access-control-allow-origin'), allowedOrigin);
+    const denied = await fetch(`${app.baseUrl}/api/v1/health`, {
+      headers: { Origin: 'http://untrusted.example' },
+    });
+    assert.equal(denied.headers.get('access-control-allow-origin'), null);
   } finally {
     await app.close();
   }

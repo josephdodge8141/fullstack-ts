@@ -1,0 +1,11 @@
+{
+  "expo": {
+    "name": "Fullstack TS",
+    "slug": "fullstack-ts",
+    "scheme": "fullstackts",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "web": { "bundler": "metro", "name": "Fullstack TS" }
+  }
+}

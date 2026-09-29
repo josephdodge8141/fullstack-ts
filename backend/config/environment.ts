@@ -2,6 +2,7 @@ export interface Environment {
   readonly host: string;
   readonly port: number;
   readonly shutdownTimeoutMs: number;
+  readonly expoWebOrigin?: string;
 }
 
 const DEFAULT_HOST = '0.0.0.0';
@@ -24,9 +25,17 @@ export function loadEnvironment(source: NodeJS.ProcessEnv = process.env): Enviro
     source.SHUTDOWN_TIMEOUT_MS,
     DEFAULT_SHUTDOWN_TIMEOUT_MS,
   );
+  const expoWebOrigin = source.EXPO_WEB_ORIGIN?.trim();
+  if (expoWebOrigin !== undefined && expoWebOrigin !== '') {
+    const parsed = new URL(expoWebOrigin);
+    if (parsed.origin !== expoWebOrigin || !['http:', 'https:'].includes(parsed.protocol)) {
+      throw new Error('EXPO_WEB_ORIGIN must be an HTTP(S) origin');
+    }
+  }
   return {
     host: source.HOST?.trim() || DEFAULT_HOST,
     port,
     shutdownTimeoutMs,
+    ...(expoWebOrigin === undefined || expoWebOrigin === '' ? {} : { expoWebOrigin }),
   };
 }

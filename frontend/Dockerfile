@@ -3,6 +3,7 @@ FROM node:24-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json tsconfig.base.json tsconfig.json ./
 COPY frontend ./frontend
+COPY mobile/package.json ./mobile/package.json
 COPY backend/package.json ./backend/package.json
 COPY infra/package.json ./infra/package.json
 COPY packages ./packages
@@ -14,6 +15,7 @@ FROM node:24-alpine
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY frontend/package.json ./frontend/package.json
+COPY mobile/package.json ./mobile/package.json
 COPY backend/package.json ./backend/package.json
 COPY infra/package.json ./infra/package.json
 COPY packages/zod/package.json ./packages/zod/package.json

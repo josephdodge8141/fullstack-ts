@@ -6,11 +6,12 @@ import type { Envelope } from '@cucumber/messages';
 
 import { loadBehaviorCatalog } from './catalog.js';
 import { normalizeLayerResults } from './layer-results.js';
+import { normalizeRuntimeEnvelopes } from './runtime-results.js';
 
 const layer = process.argv[2];
 const supportPath = process.argv[3];
-if (layer !== 'backend' && layer !== 'frontend') {
-  throw new Error('Usage: run-layer <backend|frontend> <support-file>');
+if (layer !== 'backend' && layer !== 'frontend' && layer !== 'mobile') {
+  throw new Error('Usage: run-layer <backend|frontend|mobile> <support-file>');
 }
 if (supportPath === undefined) throw new Error('A support file is required.');
 
@@ -35,7 +36,16 @@ const envelopes: Envelope[] = [];
 const result = await runCucumber(runConfiguration, { cwd: repositoryRoot }, (envelope) => {
   envelopes.push(envelope);
 });
-if (!result.success) throw new Error(`${layer} Cucumber execution failed.`);
+if (!result.success) {
+  const failed = normalizeRuntimeEnvelopes(envelopes).filter((entry) => entry.status !== 'PASSED');
+  const messages = envelopes.flatMap((envelope) => {
+    const outcome = envelope.testStepFinished?.testStepResult;
+    return outcome?.message === undefined ? [] : [outcome.message];
+  });
+  throw new Error(
+    `${layer} Cucumber execution failed: ${failed.map((entry) => `${entry.caseId}=${entry.status}`).join(', ')}\n${messages.join('\n')}`,
+  );
+}
 
 const catalog = await loadBehaviorCatalog(featureRoot);
 const normalized = normalizeLayerResults(catalog, layer, envelopes);

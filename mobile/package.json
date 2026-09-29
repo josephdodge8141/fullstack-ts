@@ -1,0 +1,30 @@
+{
+  "name": "@app/mobile",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "index.ts",
+  "scripts": {
+    "start": "expo start",
+    "ios": "NODE_OPTIONS=--dns-result-order=ipv4first expo start --ios --localhost --port 8082",
+    "android": "expo start --android",
+    "web": "expo start --web",
+    "build": "tsc --project tsconfig.json --noEmit && EXPO_NO_BUNDLE_SPLITTING=1 expo export --platform all",
+    "test:browser": "npm --prefix .. run build:contracts && npm --prefix .. run build -w @app/backend && playwright test --config playwright.config.ts",
+    "test:behaviors": "npm --prefix .. run build:contracts && npm --prefix .. run build -w @app/backend && playwright test --config playwright.config.ts --grep canonical"
+  },
+  "dependencies": {
+    "@app/schemas": "0.1.0",
+    "@expo/dom-webview": "57.0.1",
+    "@expo/metro-runtime": "57.0.16",
+    "expo": "57.0.26",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-native": "0.86.3",
+    "react-native-web": "0.21.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "4.3.3",
+    "postcss": "8.5.28"
+  }
+}

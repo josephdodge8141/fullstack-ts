@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const behaviorCategorySchema = z.enum(['application', 'factory']);
-export const behaviorLayerSchema = z.enum(['backend', 'frontend', 'factory']);
+export const behaviorLayerSchema = z.enum(['backend', 'frontend', 'mobile', 'factory']);
 
 export const catalogStepArgumentSchema = z.discriminatedUnion('type', [
   z.strictObject({

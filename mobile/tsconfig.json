@@ -1,0 +1,15 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "noEmit": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["vite/client", "node"],
+    "baseUrl": "..",
+    "paths": { "@/*": ["frontend/*"] }
+  },
+  "include": ["**/*.ts", "**/*.tsx"],
+  "exclude": ["../frontend/dist", "../node_modules"]
+}

@@ -1,5 +1,6 @@
 Feature: Public starter application
-  The starter can be used locally without cloud credentials or an account provider.
+  The web and Expo starter can be used locally without cloud credentials or an account provider.
+  Both clients use the same backend and the same public UI behavior.
 
   @id:public.ui-catalog @backend-noop
   Scenario: Use the bundled component catalog
@@ -23,6 +24,19 @@ Feature: Public starter application
     Given I am not signed in
     When I open the application
     Then I see "Hello World"
+
+  @id:public.demo-navigation @backend-noop
+  Scenario Outline: Open demos from the public landing page
+    backend-noop: Demo navigation has no backend application surface.
+    Given I am not signed in
+    When I open the application
+    And I follow the "<demo>" demo link
+    Then I see "<heading>"
+
+    Examples:
+      | case_id           | demo              | heading           |
+      | component-library | Component library | Component library |
+      | design-systems    | Design systems    | Design systems    |
 
   @id:public.health
   Scenario: Check the public backend health
